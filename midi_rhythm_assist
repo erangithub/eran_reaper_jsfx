@@ -1,35 +1,23 @@
 desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
 //author: Eran Talmor
 slider1:1<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beat Sub Divisions
-slider2:0<-50,50,1>Swing
-slider3:80<0,100,1>Early Filter %
-slider4:20<0,100,1>Late Filter %
+slider2:0<-0.5,0.5,0.01>Swing
+slider3:-0.2<-1,0,0.01>Early Filter %
+slider4:0.2<0,1,0.01>Late Filter %
 
 @init
 noteOn = $x90;
 
 maxhist = 100;
-maxage = 10;
-historyTime = 0;
-historyPitch = maxhist;
-histidx = 0;
-countBeats = 0;
-
-previousTime = 0;
-currentTime = 0;
-
-latency = 0;
+maxage = 30;
+hits = 0;
+misses = 0;
 
 // Relative time to the beat
-function getRelTime(offset)
+function getRelTime(offset) local(p)
 (
   p = (beat_position + (offset * (tempo / 60) / srate));
   p - floor(p);
-);
-
-function getTime(offset)
-(
-  getRelTime(offset) + countBeats;
 );
 
 @slider
@@ -38,22 +26,51 @@ swing = slider2;
 early = slider3;
 late = slider4;
 
+historyTime = 0;
+historyRelTime = historyTime + maxhist;
+historyHits = historyRelTime + maxhist;
+histidx = 0;
+
+subdivisions = slider1 + 1;
+vearly = maxhist*3;
+vlate = vearly + subdivisions + 1;
+vgrid = vlate + subdivisions + 1;
+
+vearly[0] = 0;
+vgrid[0] = 0;
+vgrid[subdivisions] = 1;
+vlate[subdivisions] = 1;
+
+j=0;
+loop(subdivisions+1,
+  vgrid[j] = j/subdivisions + (j&(1+subdivisions)&1 ? swing/subdivisions);
+  vearly[j] = max(0, vgrid[j] + early/2/subdivisions);
+  vlate[j] = min(1, vgrid[j] + late/2/subdivisions);
+  j+=1;
+  swing_phase *= -1;
+);
 
 @block
 
-function acceptTime(offset)
+function isHit(reltime) local(i result)
 (
-  p = subdivisions*getRelTime(offset);
-  q = 200*(p - floor(p));
-  result = (q < late) || (q > 100 + early);
+  i=0;
+  result = 0;
+  while(
+     result |= (vearly[i] <= reltime) && (reltime <= vlate[i]);
+     i += 1;
+     !result && (i <= subdivisions)
+  );
+  result;
 );
 
-function addToHistory(note, offset, accepted)
+function addToHistory(reltime, hit)
 (
-  this..historyTime[histidx] = getTime(offset);
-  this..historyPitch[histidx] = note * (accepted ? 1 : -1);
-  this..histidx += 1;
-  (this..histidx >= this..maxhist) ? (this..histidx = 0);
+     historyTime[histidx] = time_precise();
+     historyRelTime[histidx] = reltime;
+     historyHits[histidx] = hit;
+     histidx += 1;
+     (histidx >= maxhist) ? (histidx = 0);
 );
 
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
@@ -62,9 +79,10 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
    
    play_state && noteStatus==noteOn && msg3!=0 ? (
      note = msg2;
-     accepted = acceptTime(offset);
-     accepted ? (midisend(offset,msg1,note,msg3));
-     addToHistory(note, offset, accepted);
+     reltime = getRelTime(offset);
+     hit = isHit(reltime);
+     hit ? (midisend(offset,msg1,note,msg3));
+     addToHistory(reltime, hit);
    ) : (
      midisend(offset,msg1,msg2,msg3); // passthrough other events
    )
@@ -81,50 +99,46 @@ function rgb(r,g,b)
 xmargin = 20;
 ymargin = 40;
 width = gfx_w-xmargin*2;
-height = 150;
+height = max(150, gfx_h-ymargin*2);
 rgb(0.2, 0.2, 0.2); // grey
 gfx_rect(xmargin, ymargin, width, height);
-rgb(1,1,1); // white
-i = 0;
-subwidth = width / subdivisions;
-latewidth = 1+subwidth*late/200;
-earlywidth = subwidth*(100-early)/200;
 
 // Draw "grid" area
-loop(subdivisions,
-  x = xmargin + i * width / subdivisions;
+i=0;
+loop(subdivisions+1,
   rgb(0, 0.4, 0);
-  gfx_rect(x, ymargin, latewidth, height);
-  gfx_rect(x-earlywidth+subwidth, ymargin, earlywidth, height);
+  low = xmargin+vearly[i]*width;
+  grid = xmargin+vgrid[i]*width;
+  high = xmargin+vlate[i]*width;
+  gfx_rect(low, ymargin, high-low, height);
   rgb(1,1,1); // white
-  gfx_line(x,ymargin,x,ymargin+height); 
-  i += 1;
+  gfx_line(grid, ymargin, grid, ymargin + height); 
+  i+=1;
 );
 gfx_line(gfx_w-xmargin, ymargin, gfx_w-xmargin, ymargin+height);
 
-play_state ? (
-  currentTime = getRelTime(offset);
-  (previousTime > currentTime) ? countBeats += 1;
-  
+play_state ? (  
   // Draw history of notes played
   i=0;
+  now = time_precise();
   loop(maxhist,
     birth = historyTime[i];
     birth != 0 ? (
-      pitch = historyPitch[i];
-      age = min(maxage, getTime() - birth);
-      ageRatio = sqrt(1/age);
-      pitch > 0 ? rgb(0,ageRatio*ageRatio,0) : rgb(ageRatio,0,0);
-      x = width * (birth - floor(birth));
-      gfx_circle(xmargin + x, ymargin+height*(128-abs(pitch))/128, 8, 1);
+      hit = historyHits[i];
+      age = min(maxage, now - birth);
+      ageRatio = sqrt(1/(1+age));
+      hit > 0 ? rgb(0,ageRatio*ageRatio,0) : rgb(ageRatio,0,0);
+      x = width * historyRelTime[i];
+      y = age*20;
+      y < height ? (gfx_circle(xmargin + x, ymargin+y, 8, 1));
       age == maxage ? (historyTime[i] = 0);
     );
     i += 1;
   );  
-  
+
   // Draw vertical line position
   rgb(1,1,0);
-  x = xmargin + width * currentTime;
+  x = xmargin + width * getRelTime();
   gfx_line(x, ymargin, x, ymargin+height);
   
   previousTime = currentTime;
