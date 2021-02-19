@@ -1,53 +1,52 @@
 desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
-//author: Eran Talmor
-slider1:1<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beat Sub Divisions
-slider2:0<-0.5,0.5,0.01>Swing
-slider3:-0.2<-1,0,0.01>Early Filter %
-slider4:0.2<0,1,0.01>Late Filter %
+//author: Eran Talmor (C) 2021
+slider1:3<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beats
+slider2:1<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beat Sub Divisions
+slider3:0<-0.5,0.5,0.01>Swing
+slider4:-0.2<-1,0,0.01>Early Filter %
+slider5:0.2<0,1,0.01>Late Filter %
 
 @init
 noteOn = $x90;
 
 maxhist = 100;
 maxage = 30;
-hits = 0;
-misses = 0;
 
 // Relative time to the beat
 function getRelTime(offset) local(p)
 (
-  p = (beat_position + (offset * (tempo / 60) / srate));
+  p = (beat_position + (offset * (tempo / 60) / srate))/beats;
   p - floor(p);
 );
 
 @slider
-subdivisions = slider1 + 1;
-swing = slider2;
-early = slider3;
-late = slider4;
+beats = slider1+1;
+subdivisions = slider2 + 1;
+gridlines = beats * subdivisions;
+swing = slider3;
+early = slider4;
+late = slider5;
 
 historyTime = 0;
 historyRelTime = historyTime + maxhist;
 historyHits = historyRelTime + maxhist;
 histidx = 0;
 
-subdivisions = slider1 + 1;
 vearly = maxhist*3;
-vlate = vearly + subdivisions + 1;
-vgrid = vlate + subdivisions + 1;
+vlate = vearly + gridlines + 1;
+vgrid = vlate + gridlines + 1;
 
 vearly[0] = 0;
 vgrid[0] = 0;
-vgrid[subdivisions] = 1;
-vlate[subdivisions] = 1;
+vgrid[gridlines] = 1;
+vlate[gridlines] = 1;
 
 j=0;
-loop(subdivisions+1,
-  vgrid[j] = j/subdivisions + (j&(1+subdivisions)&1 ? swing/subdivisions);
-  vearly[j] = max(0, vgrid[j] + early/2/subdivisions);
-  vlate[j] = min(1, vgrid[j] + late/2/subdivisions);
+loop(gridlines+1,
+  vgrid[j] = j/gridlines + (j&(1+gridlines)&1 ? swing/gridlines);
+  vearly[j] = max(0, vgrid[j] + early/2/gridlines);
+  vlate[j] = min(1, vgrid[j] + late/2/gridlines);
   j+=1;
-  swing_phase *= -1;
 );
 
 @block
@@ -59,7 +58,7 @@ function isHit(reltime) local(i result)
   while(
      result |= (vearly[i] <= reltime) && (reltime <= vlate[i]);
      i += 1;
-     !result && (i <= subdivisions)
+     !result && (i <= gridlines)
   );
   result;
 );
@@ -96,23 +95,32 @@ function rgb(r,g,b)
   gfx_b = b;
 );
 
+function vertical_dashed_line(x, y1, y2, dash, space) local(i, y)
+(
+  y = y1;
+  loop ((y2-y1)/(dash + space),
+    gfx_line(x,y, x, y+dash);
+    y += dash+space);
+);
+
 xmargin = 20;
 ymargin = 40;
 width = gfx_w-xmargin*2;
 height = max(150, gfx_h-ymargin*2);
-rgb(0.2, 0.2, 0.2); // grey
+rgb(0.27, 0.27, 0.27); // grey
 gfx_rect(xmargin, ymargin, width, height);
 
 // Draw "grid" area
 i=0;
-loop(subdivisions+1,
+loop(gridlines+1,
   rgb(0, 0.4, 0);
   low = xmargin+vearly[i]*width;
   grid = xmargin+vgrid[i]*width;
-  high = xmargin+vlate[i]*width;
+  high = xmargin+vlate[i]*width+1;
   gfx_rect(low, ymargin, high-low, height);
-  rgb(1,1,1); // white
-  gfx_line(grid, ymargin, grid, ymargin + height); 
+  (i % subdivisions) ? 
+    (rgb(0.67, 0.67, 0.67); vertical_dashed_line(grid, ymargin, ymargin+height, 1, 10))
+  : (rgb(1, 1, 1); gfx_line(grid, ymargin, grid, ymargin + height));
   i+=1;
 );
 gfx_line(gfx_w-xmargin, ymargin, gfx_w-xmargin, ymargin+height);
@@ -121,20 +129,26 @@ play_state ? (
   // Draw history of notes played
   i=0;
   now = time_precise();
+  hits = 0;
+  events = 0;
   loop(maxhist,
     birth = historyTime[i];
     birth != 0 ? (
       hit = historyHits[i];
       age = min(maxage, now - birth);
-      ageRatio = sqrt(1/(1+age));
-      hit > 0 ? rgb(0,ageRatio*ageRatio,0) : rgb(ageRatio,0,0);
+      ageRatio = 0.2 + 1/(0.8*(1+age));
+      hit ? (hits += 1);
+      hit ? rgb(0,ageRatio,0) : rgb(ageRatio,0,0);
+      events += 1;
       x = width * historyRelTime[i];
       y = age*20;
       y < height ? (gfx_circle(xmargin + x, ymargin+y, 8, 1));
       age == maxage ? (historyTime[i] = 0);
     );
     i += 1;
-  );  
+  );
+  
+  hitRate = events ? hits / events : 0;
 
   // Draw vertical line position
   rgb(1,1,0);
