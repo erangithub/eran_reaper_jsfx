@@ -4,13 +4,15 @@ slider1:3<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beats
 slider2:1<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beat Sub Divisions
 slider3:0<-0.5,0.5,0.01>Swing
 slider4:50<0,100,1>Precision (Allowed Error)
-slider6:0<0,1,1{Off, On}>Auto Adjust
+slider6:1<0,1,1{Off, On}>Auto Adjust
+slider7:5<1,15,1>Max Training Graph Minutes
 @init
 note_on = $x90;
 
 max_hist = 200;
 max_age = 60;
-hit_rate_max_age = 10; // just measure the last 10 seconds
+graph_start = 0;
+graph_idx = 0;
 
 // Relative time to the beat
 function getRelTime(offset) local(p)
@@ -32,8 +34,8 @@ function adjustGrid() local(j)
 
 function adjustPrecision(hit_rate)
 (
-  (hit_rate < 0.85) ? precision = min(100, precision + 2);
-  (hit_rate > 0.9) ? precision = max(0, precision - 2);
+  (hit_rate < 0.85) ? precision = min(100, precision + 1);
+  (hit_rate > 0.9) ? precision = max(0, precision - 1);
   slider4 = precision;
   adjustGrid();   
 );
@@ -64,6 +66,7 @@ grid_lines = beats * subdivisions;
 swing = slider3;
 precision = slider4;
 autoadjust = slider6;
+max_graph = 60*slider7;
 
 v_history_time = 0;
 v_history_rel_time = v_history_time + max_hist;
@@ -79,22 +82,35 @@ v_grid[0] = 0;
 v_grid[grid_lines] = 1;
 v_late[grid_lines] = 1;
 
+
+v_graph_hit_rate = v_grid + grid_lines + 1;
+v_graph_precision = v_graph_hit_rate + max_graph;
+
 adjustGrid();
 
 @block
 
 
-function addToHistory(reltime, hit)
+function recordHistory(reltime, hit)
 (
-     v_history_time[histidx] = time_precise();
-     v_history_rel_time[histidx] = reltime;
-     v_history_hits[histidx] = hit;
-     events_count = events_count * 0.8 + 1;
-     hits_count = hits_count * 0.8 + (hit==0);
-     hit_rate = hits_count/events_count;
-     autoadjust ? (adjustPrecision(hit_rate));
-     histidx += 1;
-     (histidx >= max_hist) ? (histidx = 0);
+  v_history_time[histidx] = time_precise();
+  v_history_rel_time[histidx] = reltime;
+  v_history_hits[histidx] = hit;
+  events_count = events_count * 0.8 + 1;
+  hits_count = hits_count * 0.8 + (hit==0);
+  hit_rate = hits_count/events_count;
+  autoadjust ? (adjustPrecision(hit_rate));
+  histidx += 1;
+  (histidx >= max_hist) ? (histidx = 0);
+);
+
+function recordTraining()
+(
+  t = time();
+  (t - graph_start > max_graph) ? (graph_start = t; graph_idx = 0);
+  graph_idx = t - graph_start;
+  v_graph_hit_rate[graph_idx] = hit_rate;
+  v_graph_precision[graph_idx] = precision;
 );
 
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
@@ -107,10 +123,12 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
      reltime = getRelTime(offset);
      hit = isHit(reltime);
      (hit == 0) ? (midisend(offset,msg1,note,msg3));
-     addToHistory(reltime, hit);
+     recordHistory(reltime, hit);
    ) : (
      midisend(offset,msg1,msg2,msg3); // passthrough other events
-   )
+   );
+  
+   play_state ? recordTraining();
 );
 
 @gfx
@@ -124,22 +142,23 @@ function rgb(r,g,b)
 function verticalDashedLine(x, y1, y2, dash, space) local(i, y)
 (
   y = y1;
+  dash = max(0, dash-1);
   loop ((y2-y1)/(dash + space),
     gfx_line(x,y, x, y+dash);
     y += dash+space);
 );
 
 xmargin = 20;
-header_margin = 40;
+header_margin = 30;
 footer_margin = 20;
 
 gfx_x = xmargin;
-gfx_y = 5;
+gfx_y = 10;
 rgb(1,1,1);
-gfx_printf("Hit Rate: %0.f%%\t Precision: %0.f\n\nGrid:", hit_rate*100, precision);
+gfx_printf("Rhythm Grid:", hit_rate*100, precision);
 
 width = gfx_w-xmargin*2;
-grid_height = max(150, gfx_h-header_margin - footer_margin);
+grid_height = max(150, (gfx_h - header_margin - footer_margin) / 2);
 rgb(0.27, 0.27, 0.27); // grey
 gfx_rect(xmargin, header_margin, width, grid_height);
 
@@ -152,7 +171,7 @@ loop(grid_lines+1,
   high = xmargin+v_late[i]*width+1;
   gfx_rect(low, header_margin, high-low, grid_height);
   (i % subdivisions) ? 
-    (rgb(0.67, 0.67, 0.67); verticalDashedLine(grid, header_margin, header_margin+grid_height, 1, 10))
+    (rgb(0.67, 0.67, 0.67); verticalDashedLine(grid, header_margin, header_margin+grid_height, 1, 5))
   : (rgb(1, 1, 1); gfx_line(grid, header_margin, grid, header_margin + grid_height));
   i+=1;
 );
@@ -181,8 +200,60 @@ play_state ? (
   // Draw vertical time line 
   rgb(1,1,0);
   x = xmargin + width * getRelTime();
-  gfx_line(x, header_margin, x, header_margin+grid_height);
-  
-  previousTime = currentTime;
+  gfx_line(x, header_margin, x, header_margin+grid_height);  
 );
 
+// Draw Traning graph
+//-------------------
+graph_top = header_margin + grid_height + 30;
+graph_height = max(150, gfx_h - footer_margin - graph_top);
+
+gfx_x = xmargin;
+gfx_y = graph_top-20;
+rgb(1,1,1);
+gfx_printf("Training Graph (");
+rgb(1,1,0);
+gfx_printf("Hit Rate: %0.f%%", hit_rate*100);
+rgb(1,1,1);
+gfx_printf(" , ");
+rgb(0,1,1);
+gfx_printf("Precision: %0.f%%", precision);
+rgb(1,1,1);
+gfx_printf(")");
+
+rgb(0.27, 0.27, 0.4); // greyish purple
+gfx_rect(xmargin, graph_top, width, graph_height);
+
+graph_x_ratio = width/(max_graph-1);
+i=0;
+rgb(0.67, 0.67, 0.67); 
+loop(max_graph/10,
+  (i%60 == 0) ?
+    gfx_line(xmargin + i*graph_x_ratio, graph_top, xmargin + i*graph_x_ratio, graph_top+graph_height)
+  : verticalDashedLine(xmargin + i*graph_x_ratio, graph_top, graph_top+graph_height, 4, 5);
+  i += 10;);
+gfx_line(xmargin + width, graph_top, xmargin + width, graph_top+graph_height);
+
+// Draw verical time line
+rgb(1, 1, 1);
+gfx_line(xmargin + graph_idx*graph_x_ratio, graph_top, xmargin + graph_idx*graph_x_ratio, graph_top + graph_height);
+
+// hit rate
+i=0;
+rgb(1,1,0);
+gfx_x = xmargin;
+gfx_y = graph_top + graph_height*(1 - v_graph_hit_rate[0]);
+loop(max_graph,
+  hr = max(0, min(1, 1 - v_graph_hit_rate[i]));
+  gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*hr);
+  i+=1);
+
+// precision
+i=0;
+rgb(0,1,1);
+gfx_x = xmargin;
+gfx_y = graph_top + graph_height*(1 - v_graph_precision[0]/100);
+loop(max_graph,
+  pr = max(0, min(1, 1 - v_graph_precision[i]/100));
+  gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*pr);
+  i+=1);
