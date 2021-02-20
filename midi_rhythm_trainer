@@ -128,6 +128,7 @@ footer_margin = 20;
 
 gfx_x = xmargin;
 gfx_y = 5;
+rgb(1,1,1);
 gfx_printf("Hit Rate: %0.f%%\t Precision: %0.f\n\nGrid:", hit_rate*100, precision);
 
 width = gfx_w-xmargin*2;
