@@ -85,7 +85,7 @@ function addToHistory(reltime, hit)
      events_count = events_count * 0.8 + 1;
      hits_count = hits_count * 0.8 + hit;
      hit_rate = hits_count/events_count;
-     adjustPrecision(hit_rate);
+     autoadjust ? (adjustPrecision(hit_rate));
      histidx += 1;
      (histidx >= max_hist) ? (histidx = 0);
 );
@@ -133,7 +133,7 @@ gfx_printf("Hit Rate: %0.f%%\t Precision: %0.f\n\nGrid:", hit_rate*100, precisio
 width = gfx_w-xmargin*2;
 height = max(150, gfx_h-header_margin - footer_margin);
 rgb(0.27, 0.27, 0.27); // grey
-gfx_rect(xmargin, ymargin, width, height);
+gfx_rect(xmargin, header_margin, width, height);
 
 // Draw "grid" area
 i=0;
@@ -142,13 +142,13 @@ loop(grid_lines+1,
   low = xmargin+v_early[i]*width;
   grid = xmargin+v_grid[i]*width;
   high = xmargin+v_late[i]*width+1;
-  gfx_rect(low, ymargin, high-low, height);
+  gfx_rect(low, header_margin, high-low, height);
   (i % subdivisions) ? 
-    (rgb(0.67, 0.67, 0.67); verticalDashedLine(grid, ymargin, ymargin+height, 1, 10))
-  : (rgb(1, 1, 1); gfx_line(grid, ymargin, grid, ymargin + height));
+    (rgb(0.67, 0.67, 0.67); verticalDashedLine(grid, header_margin, header_margin+height, 1, 10))
+  : (rgb(1, 1, 1); gfx_line(grid, header_margin, grid, header_margin + height));
   i+=1;
 );
-gfx_line(gfx_w-xmargin, ymargin, gfx_w-xmargin, ymargin+height);
+gfx_line(gfx_w-xmargin, header_margin, gfx_w-xmargin, header_margin+height);
 
 play_state ? (  
   // Draw history of notes played
@@ -163,7 +163,7 @@ play_state ? (
       hit ? rgb(0,age_brightness,0) : rgb(age_brightness,0,0);
       x = width * v_history_rel_time[i];
       y = age*20;
-      y < height ? (gfx_circle(xmargin + x, ymargin+y, 8, 1));
+      y < height ? (gfx_circle(xmargin + x, header_margin+y, 8, 1));
       age == max_age ? (v_history_time[i] = 0);
     );
     i += 1;
@@ -172,7 +172,8 @@ play_state ? (
   // Draw vertical line position
   rgb(1,1,0);
   x = xmargin + width * getRelTime();
-  gfx_line(x, ymargin, x, ymargin+height);
+  gfx_line(x, header_margin, x, header_margin+height);
   
   previousTime = currentTime;
 );
+
