@@ -38,16 +38,23 @@ function adjustPrecision(hit_rate)
   adjustGrid();   
 );
 
-function isHit(reltime) local(i result)
+// returns: 0 == hit, -1 == early, 1 == late
+function isHit(reltime) local(i, hit, min_late, min_early, delta_early, delta_late)
 (
   i=0;
-  result = 0;
+  hit = 0;
+  min_late = 1;
+  min_early = 1;
   while(
-     result |= (v_early[i] <= reltime) && (reltime <= v_late[i]);
+     delta_early = v_early[i] - reltime;
+     delta_late = reltime - v_late[i];
+     hit |= (delta_early <= 0) && (delta_late <= 0);
+     delta_early > 0 ? (min_early = min(min_early, delta_early));
+     delta_late > 0 ? (min_late = min(min_late, delta_late));
      i += 1;
-     !result && (i <= grid_lines)
+     !hit && (i <= grid_lines)
   );
-  result;
+  hit ? 0 : (min_late > min_early ? -1 : 1); 
 );
 
 @slider
@@ -83,7 +90,7 @@ function addToHistory(reltime, hit)
      v_history_rel_time[histidx] = reltime;
      v_history_hits[histidx] = hit;
      events_count = events_count * 0.8 + 1;
-     hits_count = hits_count * 0.8 + hit;
+     hits_count = hits_count * 0.8 + (hit==0);
      hit_rate = hits_count/events_count;
      autoadjust ? (adjustPrecision(hit_rate));
      histidx += 1;
@@ -99,7 +106,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
      note = msg2;
      reltime = getRelTime(offset);
      hit = isHit(reltime);
-     hit ? (midisend(offset,msg1,note,msg3));
+     (hit == 0) ? (midisend(offset,msg1,note,msg3));
      addToHistory(reltime, hit);
    ) : (
      midisend(offset,msg1,msg2,msg3); // passthrough other events
@@ -132,9 +139,9 @@ rgb(1,1,1);
 gfx_printf("Hit Rate: %0.f%%\t Precision: %0.f\n\nGrid:", hit_rate*100, precision);
 
 width = gfx_w-xmargin*2;
-height = max(150, gfx_h-header_margin - footer_margin);
+grid_height = max(150, gfx_h-header_margin - footer_margin);
 rgb(0.27, 0.27, 0.27); // grey
-gfx_rect(xmargin, header_margin, width, height);
+gfx_rect(xmargin, header_margin, width, grid_height);
 
 // Draw "grid" area
 i=0;
@@ -143,14 +150,14 @@ loop(grid_lines+1,
   low = xmargin+v_early[i]*width;
   grid = xmargin+v_grid[i]*width;
   high = xmargin+v_late[i]*width+1;
-  gfx_rect(low, header_margin, high-low, height);
+  gfx_rect(low, header_margin, high-low, grid_height);
   (i % subdivisions) ? 
-    (rgb(0.67, 0.67, 0.67); verticalDashedLine(grid, header_margin, header_margin+height, 1, 10))
-  : (rgb(1, 1, 1); gfx_line(grid, header_margin, grid, header_margin + height));
+    (rgb(0.67, 0.67, 0.67); verticalDashedLine(grid, header_margin, header_margin+grid_height, 1, 10))
+  : (rgb(1, 1, 1); gfx_line(grid, header_margin, grid, header_margin + grid_height));
   i+=1;
 );
-gfx_line(gfx_w-xmargin, header_margin, gfx_w-xmargin, header_margin+height);
-
+gfx_line(gfx_w-xmargin, header_margin, gfx_w-xmargin, header_margin+grid_height);
+ 
 play_state ? (  
   // Draw history of notes played
   i=0;
@@ -161,19 +168,20 @@ play_state ? (
       hit = v_history_hits[i];
       age = min(max_age, now - birth);
       age_brightness = 0.2 + 1/(0.8*(1+age));
-      hit ? rgb(0,age_brightness,0) : rgb(age_brightness,0,0);
+      (hit == 0) ? rgb(0,age_brightness,0) : 
+        (hit == 1) ? rgb(age_brightness,0,0) : rgb(0,0,age_brightness);
       x = width * v_history_rel_time[i];
       y = age*20;
-      y < height ? (gfx_circle(xmargin + x, header_margin+y, 8, 1));
+      y < grid_height ? (gfx_circle(xmargin + x, header_margin+y, 8, 1));
       age == max_age ? (v_history_time[i] = 0);
     );
     i += 1;
   );
   
-  // Draw vertical line position
+  // Draw vertical time line 
   rgb(1,1,0);
   x = xmargin + width * getRelTime();
-  gfx_line(x, header_margin, x, header_margin+height);
+  gfx_line(x, header_margin, x, header_margin+grid_height);
   
   previousTime = currentTime;
 );
