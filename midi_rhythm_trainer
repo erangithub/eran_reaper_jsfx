@@ -3,16 +3,14 @@ desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
 slider1:3<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beats
 slider2:1<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beat Sub Divisions
 slider3:0<-0.5,0.5,0.01>Swing
-slider4:-0.2<-1,0,0.01>Early Filter %
-slider5:0.2<0,1,0.01>Late Filter %
+slider4:50<0,100,1>Precision (Allowed Error)
 slider6:0<0,1,1{Off, On}>Auto Adjust
 @init
 note_on = $x90;
 
-max_hist = 100;
-max_age = 30;
-level = 5;
-
+max_hist = 200;
+max_age = 60;
+hit_rate_max_age = 10; // just measure the last 10 seconds
 
 // Relative time to the beat
 function getRelTime(offset) local(p)
@@ -26,10 +24,18 @@ function adjustGrid() local(j)
   j=0;
   loop(grid_lines+1,
     v_grid[j] = j/grid_lines + (j&(1+grid_lines)&1 ? swing/grid_lines);
-    v_early[j] = max(0, v_grid[j] + early/2/grid_lines);
-    v_late[j] = min(1, v_grid[j] + late/2/grid_lines);
+    v_early[j] = max(0, v_grid[j] - precision/200/grid_lines);
+    v_late[j] = min(1, v_grid[j] + precision/200/grid_lines);
     j+=1;
   );  
+);
+
+function adjustPrecision(hit_rate)
+(
+  (hit_rate < 0.85) ? precision = min(100, precision + 2);
+  (hit_rate > 0.9) ? precision = max(0, precision - 2);
+  slider4 = precision;
+  adjustGrid();   
 );
 
 function isHit(reltime) local(i result)
@@ -49,8 +55,7 @@ beats = slider1+1;
 subdivisions = slider2 + 1;
 grid_lines = beats * subdivisions;
 swing = slider3;
-early = slider4;
-late = slider5;
+precision = slider4;
 autoadjust = slider6;
 
 v_history_time = 0;
@@ -77,6 +82,10 @@ function addToHistory(reltime, hit)
      v_history_time[histidx] = time_precise();
      v_history_rel_time[histidx] = reltime;
      v_history_hits[histidx] = hit;
+     events_count = events_count * 0.8 + 1;
+     hits_count = hits_count * 0.8 + hit;
+     hit_rate = hits_count/events_count;
+     adjustPrecision(hit_rate);
      histidx += 1;
      (histidx >= max_hist) ? (histidx = 0);
 );
@@ -86,6 +95,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
    channel = msg1 & 0x0F;
    
    play_state && noteStatus==note_on && msg3!=0 ? (
+     note_count += 1;
      note = msg2;
      reltime = getRelTime(offset);
      hit = isHit(reltime);
@@ -112,32 +122,16 @@ function verticalDashedLine(x, y1, y2, dash, space) local(i, y)
     y += dash+space);
 );
 
-function intervalPassed(k) local(t, res)
-(
-  t = time();
-  res = t - lastupdate > k;
-  res ? (lastupdate = t);
-  res
-);
-
-function adjustPrecision(hits, events)
-(
-  events > 0 ? (
-    hitRatio = hits/events;
-    (hitRatio > 0.9) ? level = min(99, level + 1);
-    (hitRatio < 0.85) ? level = max(0, level - 5);
-    late = (100-level)/100;
-    early = -late;
-    slider4 = early;
-    slider5 = late;
-    adjustGrid();
-  );   
-);
-
 xmargin = 20;
-ymargin = 40;
+header_margin = 40;
+footer_margin = 20;
+
+gfx_x = xmargin;
+gfx_y = 5;
+gfx_printf("Hit Rate: %0.f%%\t Precision: %0.f\n\nGrid:", hit_rate*100, precision);
+
 width = gfx_w-xmargin*2;
-height = max(150, gfx_h-ymargin*2);
+height = max(150, gfx_h-header_margin - footer_margin);
 rgb(0.27, 0.27, 0.27); // grey
 gfx_rect(xmargin, ymargin, width, height);
 
@@ -160,18 +154,13 @@ play_state ? (
   // Draw history of notes played
   i=0;
   now = time_precise();
-  hits = 0;
-  events = 0;
   loop(max_hist,
     birth = v_history_time[i];
     birth != 0 ? (
       hit = v_history_hits[i];
-      stillHit = isHit(v_history_rel_time[i]);
       age = min(max_age, now - birth);
-      ageRatio = 0.2 + 1/(0.8*(1+age));
-      stillHit ? (hits += 1);
-      hit ? rgb(0,ageRatio,0) : rgb(ageRatio,0,0);
-      events += 1;
+      age_brightness = 0.2 + 1/(0.8*(1+age));
+      hit ? rgb(0,age_brightness,0) : rgb(age_brightness,0,0);
       x = width * v_history_rel_time[i];
       y = age*20;
       y < height ? (gfx_circle(xmargin + x, ymargin+y, 8, 1));
@@ -179,8 +168,6 @@ play_state ? (
     );
     i += 1;
   );
-  
-  (autoadjust && intervalPassed(1)) ? (adjustPrecision(hits, events));
   
   // Draw vertical line position
   rgb(1,1,0);
