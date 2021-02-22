@@ -1,11 +1,14 @@
 desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
 //author: Eran Talmor (C) 2021
 slider1:4<1,16,1>Beats
-slider2:8<1,128,1>Divisions
-slider3:0<-0.5,0.5,0.01>Swing
-slider4:0.5<1,100,0.1>Error Bound (%)
-slider6:1<0,1,1{Off, On}>Auto Adjust Error Bound
-slider7:5<1,15,1>Max Training Graph Minutes
+slider2:8<1,128,1>Divisions1
+slider3:0<0,128,1>Divisions2
+slider4:0<0,128,1>Divisions3
+slider5:0<0,128,1>Divisions4
+slider6:0<-0.5,0.5,0.01>Swing (Div 1)
+slider7:50<1,100,0.1>Error Bound (%)
+slider8:1<0,1,1{Off, On}>Auto Adjust
+slider9:5<1,15,1>Max Training Graph Minutes
 @init
 note_on = $x90;
 
@@ -15,95 +18,129 @@ graph_start = 0;
 graph_idx = 0;
 hit_memory = 0.85;
 
-// Relative time to the beat
+// Relative time to the beats
 function getRelTime(offset) local(p)
 (
   p = (beat_position + (offset * (tempo / 60) / srate))/beats;
   p - floor(p);
 );
 
-function adjustGrid() local(j)
+function getDivs(idx)
 (
-  j=0;
-  loop(divisions+1,
-    v_grid[j] = j/divisions + (j&(1+divisions)&1 ? swing/divisions);
-    v_early[j] = max(0, v_grid[j] - error_bound/2/divisions);
-    v_late[j] = min(1, v_grid[j] + error_bound/2/divisions);
-    j+=1;
-  );  
+  idx == 0 ? div0 
+  : idx == 1 ? div1 
+  : idx == 2 ? div2 
+  : div3;
+);
+
+function getGrid(divs, i, is_swing)
+(
+  i == 0 ? 0
+  : i == divs ? 1
+  : i/divs + (is_swing&i&(1+divs)&1 ? swing/max_divs);
+);
+
+function getEarly(divs, i, is_swing)
+(
+  i == 0 ? 0
+  : max(0, getGrid(divs, i, is_swing) - error_bound/2/max_divs);
+);
+
+function getLate(divs, i, is_swing)
+(
+  i == divs ? 1
+  : min(1, getGrid(divs, i, is_swing) + error_bound/2/max_divs);
 );
 
 function adjust_error_bound(hit_rate) local(level)
 (
   (hit_rate > 0.9) ? 
-    ((error_bound < 0.2 ? level = 0.001 : error_bound <= 0.4 ? level = 0.005 : level = 0.01);
-     (error_bound = max(0, error_bound - level)));
-  slider4 = error_bound*100;
-  adjustGrid();   
+    (level = (error_bound < 0.2 ? 0.001 : error_bound <= 0.3 ? 0.002 : error_bound <= 0.4 ?  0.005 : 0.01);
+    (error_bound = max(0, error_bound - level)));
+  slider7 = error_bound*100;
 );
 
 // returns: 0 == hit, -1 == early, 1 == late
-function isHit(reltime) local(i, hit, min_late, min_early, delta_early, delta_late)
+function isHit(reltime, divIdx) local(i, hit, min_late, min_early, delta_early, delta_late, divs)
 (
   i=0;
   hit = 0;
   min_late = 1;
   min_early = 1;
+  divs = getDivs(divIdx);
+  is_swing = (divIdx == 0);
   while(
-     delta_early = v_early[i] - reltime;
-     delta_late = reltime - v_late[i];
-     hit |= (delta_early <= 0) && (delta_late <= 0);
-     delta_early > 0 ? (min_early = min(min_early, delta_early));
-     delta_late > 0 ? (min_late = min(min_late, delta_late));
-     i += 1;
-     !hit && (i <= divisions)
+    delta_early = getEarly(divs, i, is_swing) - reltime;
+    delta_late = reltime - getLate(divs, i, is_swing);
+    hit |= (delta_early <= 0) && (delta_late <= 0);
+    delta_early > 0 ? (min_early = min(min_early, delta_early));
+    delta_late > 0 ? (min_late = min(min_late, delta_late));
+    i += 1;
+    !hit && (i <= divs)
   );
   hit ? 0 : (min_late > min_early ? -1 : 1); 
 );
 
+function getClosestDivIdx(reltime, note) local(i, hit, min_late, min_early, delta_early, delta_late, delta, divs)
+(
+  min_delta = 1;
+  min_idx = 0;
+  idx = v_notes_last_div[note];
+  loop(4,
+    is_swing = (idx==0);
+    divs = getDivs(idx);
+    i=0;
+    divs ?
+    (while(
+      delta = abs(reltime - getGrid(divs, i, is_swing));
+      min_delta > delta ? (min_delta = delta; min_idx = idx); 
+      i += 1;
+      (i <= divs)
+    ));
+    idx = (idx+1)%4;
+  );
+  v_notes_last_div[note] = min_idx;
+  min_idx;
+);
+
 @slider
 beats = slider1;
-divisions = slider2;
-divisions = divisions;
-swing = slider3;
-error_bound = slider4/100;
-auto_adjust = slider6;
-max_graph = 60*slider7;
+div0 = slider2;
+div1 = slider3;
+div2 = slider4;
+div3 = slider5;
+swing = slider6;
+error_bound = slider7/100;
+auto_adjust = slider8;
+max_graph = 60*slider9;
 
-v_history_time = 0;
-v_history_rel_time = v_history_time + max_hist;
-v_history_hits = v_history_rel_time + max_hist;
-histidx = 0;
+non_zero_divisions = 1 + (div1 != 0) + (div2 != 0) + (div3 !=0);
+max_divs = max(div0, max(div1, max(div2, div3)));
 
-v_early = max_hist*3;
-v_late = v_early + divisions + 1;
-v_grid = v_late + divisions + 1;
-
-v_early[0] = 0;
-v_grid[0] = 0;
-v_grid[divisions] = 1;
-v_late[divisions] = 1;
-
-
-v_graph_hit_rate = v_grid + divisions + 1;
+v_graph_hit_rate = 4;
 v_graph_error_bound = v_graph_hit_rate + max_graph;
 
-adjustGrid();
+v_history_time = v_graph_error_bound + max_graph;
+v_history_rel_time = v_history_time + max_hist;
+v_history_hits = v_history_rel_time + max_hist;
+v_history_div = v_history_hits + max_hist;
+v_notes_last_div = v_history_div + max_hist;
+
+histidx = 0;
 
 @block
 
-
-function recordHistory(reltime, hit)
+function recordHistory(reltime, hit, divIdx)
 (
   v_history_time[histidx] = time_precise();
   v_history_rel_time[histidx] = reltime;
   v_history_hits[histidx] = hit;
+  v_history_div[histidx] = divIdx;
   events_count = events_count * hit_memory + 1;
   hits_count = hits_count * hit_memory + (hit==0);
   hit_rate = hits_count/events_count;
   (auto_adjust) ? (adjust_error_bound(hit_rate));
-  histidx += 1;
-  (histidx >= max_hist) ? (histidx = 0);
+  histidx = (histidx + 1) % max_hist;
 );
 
 function recordTraining()
@@ -123,9 +160,10 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
      note_count += 1;
      note = msg2;
      reltime = getRelTime(offset);
-     hit = isHit(reltime);
+     divIdx = getClosestDivIdx(reltime, note);
+     hit = isHit(reltime, divIdx);
      (hit == 0) ? (midisend(offset,msg1,note,msg3));
-     recordHistory(reltime, hit);
+     recordHistory(reltime, hit, divIdx);
    ) : (
      midisend(offset,msg1,msg2,msg3); // passthrough other events
    );
@@ -163,76 +201,91 @@ function drawFrame(x,y,w,h)
   gfx_lineto(x,y);
 );
 
-xmargin = 20;
-header_margin = 30;
-footer_margin = 20;
+function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
+(
+  rgb(0.27, 0.27, 0.27); // grey
+  gfx_rect(l, t, w, h);
+
+  // Draw "grid" area
+  i=0;
+  divs = getDivs(idx);
+  is_swing = (idx == 0);
+  loop(divs+1,
+    rgb(0, 0.4, 0);
+    divs = getDivs(idx);
+    low = l+getEarly(divs,i,is_swing)*w;
+    grid = l+getGrid(divs,i,is_swing)*w;
+    high = l+getLate(divs,i,is_swing)*w+1;
+    gfx_rect(low, t, high-low, h);
+    rgb(0.67, 0.67, 0.67); 
+    verticalDashedLine(grid, t, t+h, 1, 5);
+    i+=1;
+  );
+  
+  i=0;
+  loop(beats+1,
+    rgb(1,1,1);
+    grid = l + i*w/beats;
+    gfx_line(grid,t, grid,t+h);
+    i+=1;
+  );
+  
+  play_state ? (
+    i=0;
+    now = time_precise();
+    loop(max_hist,
+      birth = v_history_time[i];
+      (birth != 0) && (v_history_div[i] == idx) ? (
+        hit = v_history_hits[i];
+        age = min(max_age, now - birth);
+        age_brightness = 0.2 + 1/(0.8*(1+age));
+        (hit == 0) ? rgb(0,age_brightness,0) : 
+          (hit == 1) ? rgb(age_brightness,0,0) : rgb(0,0,age_brightness);
+        x = w * v_history_rel_time[i];
+        y = age*20;
+        y < h ? (gfx_circle(l + x, t + y, 6, 1));
+        age == max_age ? (v_history_time[i] = 0);
+      );
+      i += 1;
+    );
+    
+    // Draw vertical time line 
+    rgb(1,1,0);
+    x = l + w * getRelTime();
+    gfx_line(x, t, x, t+h);
+  );  
+  
+  drawFrame(l-1, t-1, w+2, h+2);
+);
+
+xmargin = 4;
+header_margin = 20;
+footer_margin = 4;
 
 gfx_x = xmargin;
-gfx_y = 10;
+gfx_y = 5;
 rgb(1,1,1);
 gfx_printf("Rhythm Grid:");
 
 width = gfx_w-xmargin*2;
-grid_height = max(150, (gfx_h - header_margin - footer_margin) / 2);
-rgb(0.27, 0.27, 0.27); // grey
-gfx_rect(xmargin, header_margin, width, grid_height);
+total_grid_height = max(200, (gfx_h - header_margin - footer_margin) * 0.7);
+total_grid_height -= total_grid_height % non_zero_divisions;
 
-// Draw "grid" area
-i=0;
-loop(divisions+1,
-  rgb(0, 0.4, 0);
-  low = xmargin+v_early[i]*width;
-  grid = xmargin+v_grid[i]*width;
-  high = xmargin+v_late[i]*width+1;
-  gfx_rect(low, header_margin, high-low, grid_height);
-  rgb(0.67, 0.67, 0.67); 
-  verticalDashedLine(grid, header_margin, header_margin+grid_height, 1, 5);
-  i+=1;
-);
-
-i=0;
-loop(beats+1,
-  rgb(1,1,1);
-  grid = xmargin + i*width/beats;
-  gfx_line(grid,header_margin, grid, header_margin + grid_height);
-  i+=1;
-);
-  
-drawFrame(xmargin, header_margin, width, grid_height);
- 
-play_state ? (  
-  // Draw history of notes played
-  i=0;
-  now = time_precise();
-  loop(max_hist,
-    birth = v_history_time[i];
-    birth != 0 ? (
-      hit = v_history_hits[i];
-      age = min(max_age, now - birth);
-      age_brightness = 0.2 + 1/(0.8*(1+age));
-      (hit == 0) ? rgb(0,age_brightness,0) : 
-        (hit == 1) ? rgb(age_brightness,0,0) : rgb(0,0,age_brightness);
-      x = width * v_history_rel_time[i];
-      y = age*20;
-      y < grid_height ? (gfx_circle(xmargin + x, header_margin+y, 8, 1));
-      age == max_age ? (v_history_time[i] = 0);
-    );
-    i += 1;
-  );
-  
-  // Draw vertical time line 
-  rgb(1,1,0);
-  x = xmargin + width * getRelTime();
-  gfx_line(x, header_margin, x, header_margin+grid_height);  
-);
+grid_margin = 6;
+grid_height = total_grid_height / non_zero_divisions;
+DrawGrid(0, xmargin, header_margin, width, grid_height-grid_margin);
+y = header_margin + grid_height;
+div1 ? (DrawGrid(1, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
+div2 ? (DrawGrid(2, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
+div3 ? (DrawGrid(3, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
 
 // Draw Training graph
 //-------------------
-graph_top = header_margin + grid_height + 30;
-graph_height = max(150, gfx_h - footer_margin - graph_top);
+graph_top = y + 20;
+graph_height = max(80, gfx_h - footer_margin - graph_top);
 
 gfx_x = xmargin;
-gfx_y = graph_top-20;
+gfx_y = graph_top-15;
 rgb(1,1,1);
 gfx_printf("Training Graph (");
 rgb(1,1,0);
@@ -281,4 +334,4 @@ loop(max_graph,
   gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*pr);
   i+=1);
 
-drawFrame(xmargin, graph_top, width, graph_height);
+drawFrame(xmargin-1, graph_top-1, width+2, graph_height+2);
