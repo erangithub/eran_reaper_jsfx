@@ -3,7 +3,7 @@ desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
 slider1:3<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beats
 slider2:1<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beat Sub Divisions
 slider3:0<-0.5,0.5,0.01>Swing
-slider4:0.5<0.01,1,0.01>Error Bound
+slider4:0.5<1,100,0.1>Error Bound (%)
 slider6:1<0,1,1{Off, On}>Auto Adjust Error Bound
 slider7:5<1,15,1>Max Training Graph Minutes
 @init
@@ -26,18 +26,18 @@ function adjustGrid() local(j)
   j=0;
   loop(grid_lines+1,
     v_grid[j] = j/grid_lines + (j&(1+grid_lines)&1 ? swing/grid_lines);
-    v_early[j] = max(0, v_grid[j] - precision/2/grid_lines);
-    v_late[j] = min(1, v_grid[j] + precision/2/grid_lines);
+    v_early[j] = max(0, v_grid[j] - error_bound/2/grid_lines);
+    v_late[j] = min(1, v_grid[j] + error_bound/2/grid_lines);
     j+=1;
   );  
 );
 
-function adjustPrecision(hit_rate) local(level)
+function adjust_error_bound(hit_rate) local(level)
 (
   (hit_rate > 0.9) ? 
-    ((precision < 0.2 ? level = 0.001 : precision <= 0.4 ? level = 0.005 : level = 0.01);
-     (precision = max(0, precision - level)));
-  slider4 = precision;
+    ((error_bound < 0.2 ? level = 0.001 : error_bound <= 0.4 ? level = 0.005 : level = 0.01);
+     (error_bound = max(0, error_bound - level)));
+  slider4 = error_bound*100;
   adjustGrid();   
 );
 
@@ -65,8 +65,8 @@ beats = slider1+1;
 subdivisions = slider2 + 1;
 grid_lines = beats * subdivisions;
 swing = slider3;
-precision = slider4;
-autoadjust = slider6;
+error_bound = slider4/100;
+auto_adjust = slider6;
 max_graph = 60*slider7;
 
 v_history_time = 0;
@@ -85,7 +85,7 @@ v_late[grid_lines] = 1;
 
 
 v_graph_hit_rate = v_grid + grid_lines + 1;
-v_graph_precision = v_graph_hit_rate + max_graph;
+v_graph_error_bound = v_graph_hit_rate + max_graph;
 
 adjustGrid();
 
@@ -100,7 +100,7 @@ function recordHistory(reltime, hit)
   events_count = events_count * 0.8 + 1;
   hits_count = hits_count * 0.8 + (hit==0);
   hit_rate = hits_count/events_count;
-  (autoadjust) ? (adjustPrecision(hit_rate));
+  (auto_adjust) ? (adjust_error_bound(hit_rate));
   histidx += 1;
   (histidx >= max_hist) ? (histidx = 0);
 );
@@ -111,7 +111,7 @@ function recordTraining()
   (t - graph_start > max_graph) ? (graph_start = t; graph_idx = 0);
   graph_idx = t - graph_start;
   v_graph_hit_rate[graph_idx] = hit_rate;
-  v_graph_precision[graph_idx] = precision;
+  v_graph_error_bound[graph_idx] = error_bound;
 );
 
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
@@ -232,7 +232,7 @@ gfx_printf("Hit Rate: %0.0f%%", hit_rate*100);
 rgb(1,1,1);
 gfx_printf(" , ");
 rgb(0,1,1);
-gfx_printf("Precision: %0.0f%%", precision*100);
+gfx_printf("error_bound: %0.0f%%", error_bound*100);
 rgb(1,1,1);
 gfx_printf(")");
 
@@ -263,13 +263,13 @@ loop(max_graph,
   gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*hr);
   i+=1);
 
-// precision
+// error_bound
 i=0;
 rgb(0,1,1);
 gfx_x = xmargin;
-gfx_y = graph_top + graph_height*(1 - v_graph_precision[0]);
+gfx_y = graph_top + graph_height*(1 - v_graph_error_bound[0]);
 loop(max_graph,
-  pr = max(0, min(1, 1 - v_graph_precision[i]));
+  pr = max(0, min(1, 1 - v_graph_error_bound[i]));
   gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*pr);
   i+=1);
 
