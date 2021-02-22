@@ -1,7 +1,7 @@
 desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
 //author: Eran Talmor (C) 2021
-slider1:3<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beats
-slider2:1<1,16,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Beat Sub Divisions
+slider1:4<1,16,1>Beats
+slider2:8<1,128,1>Divisions
 slider3:0<-0.5,0.5,0.01>Swing
 slider4:0.5<1,100,0.1>Error Bound (%)
 slider6:1<0,1,1{Off, On}>Auto Adjust Error Bound
@@ -13,6 +13,7 @@ max_hist = 200;
 max_age = 60;
 graph_start = 0;
 graph_idx = 0;
+hit_memory = 0.85;
 
 // Relative time to the beat
 function getRelTime(offset) local(p)
@@ -24,10 +25,10 @@ function getRelTime(offset) local(p)
 function adjustGrid() local(j)
 (
   j=0;
-  loop(grid_lines+1,
-    v_grid[j] = j/grid_lines + (j&(1+grid_lines)&1 ? swing/grid_lines);
-    v_early[j] = max(0, v_grid[j] - error_bound/2/grid_lines);
-    v_late[j] = min(1, v_grid[j] + error_bound/2/grid_lines);
+  loop(divisions+1,
+    v_grid[j] = j/divisions + (j&(1+divisions)&1 ? swing/divisions);
+    v_early[j] = max(0, v_grid[j] - error_bound/2/divisions);
+    v_late[j] = min(1, v_grid[j] + error_bound/2/divisions);
     j+=1;
   );  
 );
@@ -55,15 +56,15 @@ function isHit(reltime) local(i, hit, min_late, min_early, delta_early, delta_la
      delta_early > 0 ? (min_early = min(min_early, delta_early));
      delta_late > 0 ? (min_late = min(min_late, delta_late));
      i += 1;
-     !hit && (i <= grid_lines)
+     !hit && (i <= divisions)
   );
   hit ? 0 : (min_late > min_early ? -1 : 1); 
 );
 
 @slider
-beats = slider1+1;
-subdivisions = slider2 + 1;
-grid_lines = beats * subdivisions;
+beats = slider1;
+divisions = slider2;
+divisions = divisions;
 swing = slider3;
 error_bound = slider4/100;
 auto_adjust = slider6;
@@ -75,16 +76,16 @@ v_history_hits = v_history_rel_time + max_hist;
 histidx = 0;
 
 v_early = max_hist*3;
-v_late = v_early + grid_lines + 1;
-v_grid = v_late + grid_lines + 1;
+v_late = v_early + divisions + 1;
+v_grid = v_late + divisions + 1;
 
 v_early[0] = 0;
 v_grid[0] = 0;
-v_grid[grid_lines] = 1;
-v_late[grid_lines] = 1;
+v_grid[divisions] = 1;
+v_late[divisions] = 1;
 
 
-v_graph_hit_rate = v_grid + grid_lines + 1;
+v_graph_hit_rate = v_grid + divisions + 1;
 v_graph_error_bound = v_graph_hit_rate + max_graph;
 
 adjustGrid();
@@ -97,8 +98,8 @@ function recordHistory(reltime, hit)
   v_history_time[histidx] = time_precise();
   v_history_rel_time[histidx] = reltime;
   v_history_hits[histidx] = hit;
-  events_count = events_count * 0.8 + 1;
-  hits_count = hits_count * 0.8 + (hit==0);
+  events_count = events_count * hit_memory + 1;
+  hits_count = hits_count * hit_memory + (hit==0);
   hit_rate = hits_count/events_count;
   (auto_adjust) ? (adjust_error_bound(hit_rate));
   histidx += 1;
@@ -178,19 +179,26 @@ gfx_rect(xmargin, header_margin, width, grid_height);
 
 // Draw "grid" area
 i=0;
-loop(grid_lines+1,
+loop(divisions+1,
   rgb(0, 0.4, 0);
   low = xmargin+v_early[i]*width;
   grid = xmargin+v_grid[i]*width;
   high = xmargin+v_late[i]*width+1;
   gfx_rect(low, header_margin, high-low, grid_height);
-  (i % subdivisions) ? 
-    (rgb(0.67, 0.67, 0.67); verticalDashedLine(grid, header_margin, header_margin+grid_height, 1, 5))
-  : (rgb(1, 1, 1); gfx_line(grid, header_margin, grid, header_margin + grid_height));
+  rgb(0.67, 0.67, 0.67); 
+  verticalDashedLine(grid, header_margin, header_margin+grid_height, 1, 5);
   i+=1;
 );
+
+i=0;
+loop(beats+1,
+  rgb(1,1,1);
+  grid = xmargin + i*width/beats;
+  gfx_line(grid,header_margin, grid, header_margin + grid_height);
+  i+=1;
+);
+  
 drawFrame(xmargin, header_margin, width, grid_height);
-//gfx_line(gfx_w-xmargin, header_margin, gfx_w-xmargin, header_margin+grid_height);
  
 play_state ? (  
   // Draw history of notes played
