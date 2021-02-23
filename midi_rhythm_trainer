@@ -95,28 +95,6 @@ function isHit(reltime, divIdx) local(i, hit, min_late, min_early, delta_early, 
   hit ? 0 : (min_late > min_early ? -1 : 1); 
 );
 
-function getClosestDivIdx(reltime, note) local(i, hit, min_late, min_early, delta_early, delta_late, delta, divs)
-(
-  min_delta = 1;
-  min_idx = 0;
-  idx = v_notes_last_div[note];
-  loop(4,
-    is_swing = (idx==0);
-    divs = getDivs(idx);
-    i=0;
-    divs ?
-    (while(
-      delta = abs(reltime - getGrid(divs, i, is_swing));
-      min_delta > delta ? (min_delta = delta; min_idx = idx); 
-      i += 1;
-      (i <= divs)
-    ));
-    idx = (idx+1)%4;
-  );
-  v_notes_last_div[note] = min_idx;
-  min_idx;
-);
-
 @slider
 beats = slider1;
 div0 = slider2;
@@ -140,7 +118,6 @@ v_history_rel_time = v_history_time + max_hist;
 v_history_hits = v_history_rel_time + max_hist;
 v_history_div = v_history_hits + max_hist;
 v_history_notes = v_history_div + max_hist;
-v_notes_last_div = v_history_notes + max_hist;
 
 histidx = 0;
 
@@ -177,7 +154,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
      note_count += 1;
      note = msg2;
      reltime = getRelTime(offset);
-     divIdx = channel ? (channel - 1) : (getClosestDivIdx(reltime, note));
+     divIdx = channel % 4;
      hit = isHit(reltime, divIdx);
      (hit == 0) ? (midisend(offset,msg1,note,msg3));
      recordHistory(reltime, hit, divIdx, note);
