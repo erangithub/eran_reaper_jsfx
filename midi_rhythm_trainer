@@ -21,13 +21,13 @@ slider5:0<0,128,1>Divisions4
 slider6:0<-0.5,0.5,0.01>Swing (Div 1)
 slider7:50<1,100,0.1>Error Bound (%)
 slider8:1<0,1,1{Off, On}>Auto Adjust
-slider9:5<1,15,1>Max Training Graph Minutes
-slider10:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
+slider9:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
 @init
 note_on = $x90;
 
 max_hist = 200;
 max_age = 60;
+max_graph = 10*60;
 graph_start = 0;
 graph_idx = 0;
 hit_memory = 0.85;
@@ -104,20 +104,19 @@ div3 = slider5;
 swing = slider6;
 error_bound = slider7/100;
 auto_adjust = slider8;
-max_graph = 60*slider9;
-event_style = slider10;
+event_style = slider9;
 
 non_zero_divisions = 1 + (div1 != 0) + (div2 != 0) + (div3 !=0);
 max_divs = max(div0, max(div1, max(div2, div3)));
 
-v_graph_hit_rate = 4;
-v_graph_error_bound = v_graph_hit_rate + max_graph;
-
-v_history_time = v_graph_error_bound + max_graph;
+v_history_time = 4; 
 v_history_rel_time = v_history_time + max_hist;
 v_history_hits = v_history_rel_time + max_hist;
 v_history_div = v_history_hits + max_hist;
 v_history_notes = v_history_div + max_hist;
+
+v_graph_hit_rate = v_history_notes + max_hist;
+v_graph_error_bound = v_graph_hit_rate + max_graph;
 
 histidx = 0;
 
