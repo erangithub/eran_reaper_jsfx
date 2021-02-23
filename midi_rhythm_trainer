@@ -9,6 +9,7 @@ slider6:0<-0.5,0.5,0.01>Swing (Div 1)
 slider7:50<1,100,0.1>Error Bound (%)
 slider8:1<0,1,1{Off, On}>Auto Adjust
 slider9:5<1,15,1>Max Training Graph Minutes
+slider10:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
 @init
 note_on = $x90;
 
@@ -113,6 +114,7 @@ swing = slider6;
 error_bound = slider7/100;
 auto_adjust = slider8;
 max_graph = 60*slider9;
+event_style = slider10;
 
 non_zero_divisions = 1 + (div1 != 0) + (div2 != 0) + (div3 !=0);
 max_divs = max(div0, max(div1, max(div2, div3)));
@@ -124,18 +126,20 @@ v_history_time = v_graph_error_bound + max_graph;
 v_history_rel_time = v_history_time + max_hist;
 v_history_hits = v_history_rel_time + max_hist;
 v_history_div = v_history_hits + max_hist;
-v_notes_last_div = v_history_div + max_hist;
+v_history_notes = v_history_div + max_hist;
+v_notes_last_div = v_history_notes + max_hist;
 
 histidx = 0;
 
 @block
 
-function recordHistory(reltime, hit, divIdx)
+function recordHistory(reltime, hit, divIdx, note)
 (
   v_history_time[histidx] = time_precise();
   v_history_rel_time[histidx] = reltime;
   v_history_hits[histidx] = hit;
   v_history_div[histidx] = divIdx;
+  v_history_notes[histidx] = note;
   events_count = events_count * hit_memory + 1;
   hits_count = hits_count * hit_memory + (hit==0);
   hit_rate = hits_count/events_count;
@@ -160,10 +164,10 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax while()
      note_count += 1;
      note = msg2;
      reltime = getRelTime(offset);
-     divIdx = getClosestDivIdx(reltime, note);
+     divIdx = channel ? (channel - 1) : (getClosestDivIdx(reltime, note));
      hit = isHit(reltime, divIdx);
      (hit == 0) ? (midisend(offset,msg1,note,msg3));
-     recordHistory(reltime, hit, divIdx);
+     recordHistory(reltime, hit, divIdx, note);
    ) : (
      midisend(offset,msg1,msg2,msg3); // passthrough other events
    );
@@ -199,6 +203,31 @@ function drawFrame(x,y,w,h)
   gfx_lineto(x,y+h);
   rgb(0.5,0.5,0.5);
   gfx_lineto(x,y);
+);
+
+function printCenter(x,y,str) local(w,h)
+(
+  gfx_measurestr(str,w,h);
+  gfx_x = x-w/2;
+  gfx_y = y;
+  gfx_printf(str);
+);
+
+function noteName(note) local(names,sharps,nm,sh,str)
+(
+  names  = "CCDDEFFGGAAB";
+  sharps = $x54A;
+  nm = str_getchar(names, note%12);
+  sh = ((1 << (note%12)) & sharps ? "#" : "");
+  sprintf(str,"%c%s\%d", nm, sh, floor(note/12));
+  str;
+);
+
+function drawEvent(x, y, note) local(str)
+(
+  (event_style == 0) ? gfx_circle(x, y, 6, 0)
+: (event_style == 1) ? printCenter(x, y, noteName(note))  
+: (event_style == 2) ? (sprintf(str, "%d", note);  printCenter(x, y, str));
 );
 
 function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
@@ -243,7 +272,7 @@ function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
           (hit == 1) ? rgb(age_brightness,0,0) : rgb(0,0,age_brightness);
         x = w * v_history_rel_time[i];
         y = age*20;
-        y < h ? (gfx_circle(l + x, t + y, 6, 1));
+        y < h ? (drawEvent(l+x,t+y, v_history_notes[i]));
         age == max_age ? (v_history_time[i] = 0);
       );
       i += 1;
