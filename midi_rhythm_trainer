@@ -14,10 +14,10 @@
 desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
 //author: Eran Talmor (C) 2021
 slider1:4<1,16,1>Beats
-slider2:8<1,128,1>Divisions1
-slider3:0<0,128,1>Divisions2
-slider4:0<0,128,1>Divisions3
-slider5:0<0,128,1>Divisions4
+slider2:8<1,128,1>Divisions1 (Channels 1,5,9,13)
+slider3:0<0,128,1>Divisions2 (Channels 2,6,10,14)
+slider4:0<0,128,1>Divisions3 (Channels 3,7,11,15)
+slider5:0<0,128,1>Divisions4 (Channels 4,8,12,16)
 slider6:0<-0.5,0.5,0.01>Swing (Div 1)
 slider7:50<1,100,0.1>Error Bound (%)
 slider8:1<0,1,1{Off, On}>Auto Adjust
@@ -212,9 +212,9 @@ function noteName(note) local(names,sharps,nm,sh,str)
   str;
 );
 
-function drawEvent(x, y, note) local(str)
+function drawEvent(x, y, note, is_hit) local(str)
 (
-  (event_style == 0) ? gfx_circle(x, y, 6, 0)
+  (event_style == 0) ? (is_hit ? gfx_circle(x, y, 6, 1) : (gfx_circle(x, y, 6, 0); gfx_circle(x, y, 5, 0)))
 : (event_style == 1) ? printCenter(x, y, noteName(note))  
 : (event_style == 2) ? (sprintf(str, "%d", note);  printCenter(x, y, str));
 );
@@ -261,7 +261,7 @@ function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
           (hit == 1) ? rgb(age_brightness,0,0) : rgb(0,0,age_brightness);
         x = w * v_history_rel_time[i];
         y = age*20;
-        y < h ? (drawEvent(l+x,t+y, v_history_notes[i]));
+        y < h ? (drawEvent(l+x,t+y, v_history_notes[i], (hit == 0)));
         age == max_age ? (v_history_time[i] = 0);
       );
       i += 1;
