@@ -232,6 +232,14 @@ function printCenter(x,y,str) local(w,h)
   gfx_printf(str);
 );
 
+function printBottomLeft(x,y,str) local(w,h)
+(
+  gfx_measurestr(str,w,h);
+  gfx_x = x-w;
+  gfx_y = y-h;
+  gfx_printf(str);
+);
+
 function noteName(note) local(names,sharps,nm,sh,str)
 (
   names  = "CCDDEFFGGAAB";
@@ -244,7 +252,7 @@ function noteName(note) local(names,sharps,nm,sh,str)
 
 function drawEvent(x, y, note, is_hit) local(str)
 (
-  (event_style == 0) ? (is_hit ? gfx_circle(x, y, 6, 1) : (gfx_circle(x, y, 6, 0); gfx_circle(x, y, 5, 0)))
+  (event_style == 0) ? (is_hit ? gfx_circle(x, y, 6, 1, 1) : (gfx_circle(x, y, 6, 0,1); gfx_circle(x, y, 5, 0,1)))
 : (event_style == 1) ? printCenter(x, y, noteName(note))  
 : (event_style == 2) ? (sprintf(str, "%d", note);  printCenter(x, y, str));
 );
@@ -280,14 +288,21 @@ function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
   );
   
   // Draw beat marks
+  rgb(0.8, 0.8, 0.8);
+  (idx == 0) ? gfx_setfont(1, "Arial", 12);
   i=0;
   loop(beats+1,
-    rgb(1,1,1);
     grid = l + i*w/beats;
     gfx_line(grid,t, grid,t+h*0.1);
     gfx_line(grid,t+h*0.9, grid,t+h);
+    (idx == 0) ? (
+      gfx_x = grid + 3;
+      gfx_y = t + 1;
+      gfx_printf("%d",i+1);
+    );
     i+=1;
   );
+  gfx_setfont(0);
   
   play_state ? (
     i=0;
@@ -326,8 +341,9 @@ header_margin = 20;
 footer_margin = 4;
 
 gfx_x = xmargin;
-gfx_y = 5;
+gfx_y = 1;
 rgb(1,1,1);
+gfx_setfont(3, "Arial", 15);
 gfx_printf("Rhythm Grid:");
 
 width = gfx_w-xmargin*2;
@@ -349,13 +365,14 @@ graph_top = y + 20;
 graph_height = max(80, gfx_h - footer_margin - graph_top);
 
 gfx_x = xmargin;
-gfx_y = graph_top-15;
+gfx_y = graph_top-20;
+gfx_setfont(3, "Arial", 15);
 rgb(1,1,1);
 gfx_printf("Training Graph (");
 rgb(1,1,0);
 gfx_printf("Hit Rate: %0.0f%%", hit_rate*100);
 rgb(1,1,1);
-gfx_printf(" , ");
+gfx_printf(", ");
 rgb(0,1,1);
 gfx_printf("error_bound: %0.0f%%", error_bound*100);
 rgb(1,1,1);
@@ -364,12 +381,15 @@ gfx_printf(")");
 rgb(0.27, 0.27, 0.4); // greyish purple
 gfx_rect(xmargin, graph_top, width, graph_height);
 
+gfx_setfont(3, "Arial", 12);
 graph_x_ratio = width/(max_graph-1);
 i=0;
 rgb(0.67, 0.67, 0.67); 
 loop(max_graph/10,
   (i%60 == 0) ?
-    gfx_line(xmargin + i*graph_x_ratio, graph_top, xmargin + i*graph_x_ratio, graph_top+graph_height)
+    (gfx_line(xmargin + i*graph_x_ratio, graph_top, xmargin + i*graph_x_ratio, graph_top+graph_height);
+    sprintf(str, "%2d", 1+i/60);
+    printBottomLeft(xmargin + (i+60)*graph_x_ratio-1, graph_top + graph_height, str))
   : verticalDashedLine(xmargin + i*graph_x_ratio, graph_top, graph_top+graph_height, 4, 5);
   i += 10;);
 gfx_line(xmargin + width, graph_top, xmargin + width, graph_top+graph_height);
