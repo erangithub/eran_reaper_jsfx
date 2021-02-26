@@ -183,8 +183,9 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
      reltime = getRelTime(offset);
      divIdx = channel % 4;
      hit = isHit(reltime, divIdx);
-     (hit == 0) ? (midisend(offset,msg1,note,msg3));
-     isRecording() ? recordRecording(reltime, divIdx) : recordHistory(reltime, hit, divIdx, note);
+     isrec = isRecording();
+     (isrec || (hit == 0)) ? (midisend(offset,msg1,note,msg3));
+     isrec ? recordRecording(reltime, divIdx) : recordHistory(reltime, hit, divIdx, note);
    ) : (
      enable_recording = 1;
      midisend(offset,msg1,msg2,msg3); // passthrough other events
