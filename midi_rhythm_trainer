@@ -16,9 +16,9 @@ desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
 slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
 slider3:0<0,3,1{CH 1/4/9/13,CH 2/6/10/14,CH 3/7/11/15,CH 4/8/12/16}>Select Channel
-slider4:8<0,64,1>Divisions
-slider5:0<-0.5,0.5,0.01>Swing
-slider6:0<0,1,0.01>Offset
+slider4:8<0,64,1>Channel Divisions
+slider5:0<-0.5,0.5,0.01>Channel Swing
+slider6:0<0,1,0.01>Channel Phase
 slider7:50<1,100,0.1>Error Bound (%)
 slider8:1<0,1,1{Off,On}>Auto Adjust
 slider9:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
@@ -26,19 +26,19 @@ slider9:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
 // Hidden sliders per channel
 slider20:8<1,64,1>-Divisions1
 slider21:0<-0.5,0.5,0.01>-Swing1
-slider22:0<0,1,0.01>-Offset1
+slider22:0<0,1,0.01>-Phase1
 
 slider30:0<0,64,1>-Divisions2
 slider31:0<-0.5,0.5,0.01>-Swing2
-slider32:0<0,1,0.01>-Offset2
+slider32:0<0,1,0.01>-Phase2
 
 slider40:0<0,64,1>-Divisions3
 slider41:0<-0.5,0.5,0.01>-Swing3
-slider42:0<0,1,0.01>-Offset3
+slider42:0<0,1,0.01>-Phase3
 
 slider50:0<0,64,1>-Divisions4
 slider51:0<-0.5,0.5,0.01>-Swing4
-slider52:0<0,1,0.01>-Offset4
+slider52:0<0,1,0.01>-Phase4
 
 @init
 note_on = $x90;
@@ -97,13 +97,13 @@ function getSwing(idx)
   : swing3;
 );
 
-function getOffset(idx)
+function getPhase(idx)
 ( 
   (entry_mode == 1) ? 0
-  : idx == 0 ? offset0 
-  : idx == 1 ? offset1 
-  : idx == 2 ? offset2
-  : offset3;
+  : idx == 0 ? phase0 
+  : idx == 1 ? phase1 
+  : idx == 2 ? phase2
+  : phase3;
 );
 
 function isRecording()
@@ -114,7 +114,7 @@ function isRecording()
 function getGridRaw(chan, divs, i)
 (
   (entry_mode == 1) ? v_rec[max_hist*chan + i]
-  : (i + (i&1 ? getSwing(chan)) + getOffset(chan))/divs;
+  : (i + (i&1 ? getSwing(chan)) + getPhase(chan))/divs;
 );
 
 function getGrid(chan, divs, i)
@@ -190,19 +190,19 @@ prev_select = select;
 
 div0 = slider20;
 swing0 = slider21;
-offset0 = slider22;
+phase0 = slider22;
 
 div1 = slider30;
 swing1 = slider31;
-offset1 = slider32;
+phase1 = slider32;
 
 div2 = slider40;
 swing2 = slider41;
-offset2 = slider42;
+phase2 = slider42;
 
 div3 = slider50;
 swing3 = slider51;
-offset3 = slider52;
+phase3 = slider52;
 
 max_divs = max(div0, max(div1, max(div2, div3)));
 
