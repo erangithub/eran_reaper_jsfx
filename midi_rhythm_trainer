@@ -43,6 +43,7 @@ slider52:0<0,1,0.01>-Offset4
 @init
 note_on = $x90;
 
+hist_idx = 0;
 max_hist = 200;
 max_age = 60;
 max_graph = 10*60;
@@ -57,8 +58,8 @@ prev_select = -1;
 v_history_time = 4; 
 v_history_rel_time = v_history_time + max_hist;
 v_history_hits = v_history_rel_time + max_hist;
-v_history_div = v_history_hits + max_hist;
-v_history_notes = v_history_div + max_hist;
+v_history_chan = v_history_hits + max_hist;
+v_history_notes = v_history_chan + max_hist;
 v_rec_indices = v_history_notes + max_hist;
 v_rec = v_rec_indices + 4;
 v_graph_hit_rate = v_rec + 4*max_hist;
@@ -71,11 +72,11 @@ function getRelTime(offset) local(p)
   p - floor(p);
 );
 
-function recordRecording(reltime, divIdx) local(i)
+function recordRecording(reltime, chan) local(i)
 (
-  v_rec[divIdx*max_hist + v_rec_indices[divIdx]] = reltime;
-  v_rec_indices[divIdx] += 1;
-  max_recorded_divs = max(max_recorded_divs, v_rec_indices[divIdx]);
+  v_rec[chan*max_hist + v_rec_indices[chan]] = reltime;
+  v_rec_indices[chan] += 1;
+  max_recorded_divs = max(max_recorded_divs, v_rec_indices[chan]);
 );
 
 function getDivs(idx)
@@ -110,15 +111,15 @@ function isRecording()
   play_state && enable_recording && (entry_mode == 1) && ((beat_position) < beats)
 );
 
-function getGridRaw(divIdx, divs, i)
+function getGridRaw(chan, divs, i)
 (
-  (entry_mode == 1) ? v_rec[max_hist*divIdx + i]
-  : (i + (i&1 ? getSwing(divIdx)) + getOffset(divIdx))/divs;
+  (entry_mode == 1) ? v_rec[max_hist*chan + i]
+  : (i + (i&1 ? getSwing(chan)) + getOffset(chan))/divs;
 );
 
-function getGrid(divIdx, divs, i)
+function getGrid(chan, divs, i)
 (
-  r = getGridRaw(divIdx, divs, (i+divs)%divs);
+  r = getGridRaw(chan, divs, (i+divs)%divs);
   (i<0) ? r-1 : (i>=divs) ? r+1 : r;
 );
 
@@ -127,14 +128,14 @@ function getErrorRange()
   (entry_mode == 1) ? error_bound/max_recorded_divs : error_bound/max_divs;
 );
 
-function getEarly(divIdx, divs, i)
+function getEarly(chan, divs, i)
 (
-  max(0, getGrid(divIdx, divs, i) - getErrorRange()/2);
+  max(0, getGrid(chan, divs, i) - getErrorRange()/2);
 );
 
-function getLate(divIdx, divs, i)
+function getLate(chan, divs, i)
 (
-  min(1, getGrid(divIdx, divs, i) + getErrorRange()/2);
+  min(1, getGrid(chan, divs, i) + getErrorRange()/2);
 );
 
 function adjust_error_bound(hit_rate) local(level)
@@ -146,16 +147,16 @@ function adjust_error_bound(hit_rate) local(level)
 );
 
 // returns: 0 == hit, -1 == early, 1 == late
-function isHit(reltime, divIdx) local(i, hit, min_late, min_early, delta_early, delta_late, divs)
+function isHit(reltime, chan) local(i, hit, min_late, min_early, delta_early, delta_late, divs)
 (
   i=0;
   hit = 0;
   min_late = 1;
   min_early = 1;
-  divs = getDivs(divIdx);
+  divs = getDivs(chan);
   while(
-    delta_early = getEarly(divIdx, divs, i) - reltime;
-    delta_late = reltime - getLate(divIdx, divs, i);
+    delta_early = getEarly(chan, divs, i) - reltime;
+    delta_late = reltime - getLate(chan, divs, i);
     hit |= (delta_early <= 0) && (delta_late <= 0);
     delta_early > 0 ? (min_early = min(min_early, delta_early));
     delta_late > 0 ? (min_late = min(min_late, delta_late));
@@ -205,24 +206,22 @@ offset3 = slider52;
 
 max_divs = max(div0, max(div1, max(div2, div3)));
 
-histidx = 0;
-
 @block
 
-function recordHistory(reltime, hit, divIdx, note)
+function recordHistory(reltime, hit, chan, note)
 (
   enable_recording = 0;
   rec_idx = 0;
-  v_history_time[histidx] = time_precise();
-  v_history_rel_time[histidx] = reltime;
-  v_history_hits[histidx] = hit;
-  v_history_div[histidx] = divIdx;
-  v_history_notes[histidx] = note;
+  v_history_time[hist_idx] = time_precise();
+  v_history_rel_time[hist_idx] = reltime;
+  v_history_hits[hist_idx] = hit;
+  v_history_chan[hist_idx] = chan;
+  v_history_notes[hist_idx] = note;
   events_count = events_count * hit_memory + 1;
   hits_count = hits_count * hit_memory + (hit==0);
   hit_rate = hits_count/events_count;
   (auto_adjust) ? (adjust_error_bound(hit_rate));
-  histidx = (histidx + 1) % max_hist;
+  hist_idx = (hist_idx + 1) % max_hist;
 );
 
 function recordTraining()
@@ -242,11 +241,11 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
      note_count += 1;
      note = msg2;
      reltime = getRelTime(offset);
-     divIdx = channel % 4;
-     hit = isHit(reltime, divIdx);
+     chan = channel % 4;
+     hit = isHit(reltime, chan);
      isrec = isRecording();
      (isrec || (hit == 0)) ? (midisend(offset,msg1,note,msg3));
-     isrec ? recordRecording(reltime, divIdx) : recordHistory(reltime, hit, divIdx, note);
+     isrec ? recordRecording(reltime, chan) : recordHistory(reltime, hit, chan, note);
    ) : (
      enable_recording = 1;
      midisend(offset,msg1,msg2,msg3); // passthrough other events
@@ -318,21 +317,21 @@ function drawEvent(x, y, note, is_hit) local(str)
 : (event_style == 2) ? (sprintf(str, "%d", note);  printCenter(x, y, str));
 );
 
-function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
+function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
 (
   rgb(0.27, 0.27, 0.27);
   gfx_rect(l, t, isRecording() ? w * getRelTime() : w, h);
 
   // Draw "grid" area
-  divs = getDivs(idx);
+  divs = getDivs(chan);
   
   !isRecording() ? (
     // Draw green areas
     rgb(0, 0.4, 0);
     i=-1;
     loop(divs+2,
-      low = l+getEarly(idx, divs, i)*w;
-      high = l+getLate(idx, divs, i)*w+1;
+      low = l+getEarly(chan, divs, i)*w;
+      high = l+getLate(chan, divs, i)*w+1;
       gfx_rect(low, t, high-low, h);
       i+=1;
     );
@@ -342,20 +341,20 @@ function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
   i=0;
   rgb(0.67, 0.67, 0.67);
   loop(divs, 
-    grid = l+getGrid(idx, divs, i)*w;
+    grid = l+getGrid(chan, divs, i)*w;
     verticalDashedLine(grid, t, t+h, 1, 5);
     i+=1;
   );
   
   // Draw beat marks
   rgb(0.8, 0.8, 0.8);
-  (idx == 0) ? gfx_setfont(1, "Arial", 12);
+  (chan == 0) ? gfx_setfont(1, "Arial", 12);
   i=0;
   loop(beats+1,
     grid = l + i*w/beats;
     gfx_line(grid,t, grid,t+h*0.1);
     gfx_line(grid,t+h*0.9, grid,t+h);
-    (idx == 0) ? (
+    (chan == 0) ? (
       gfx_x = grid + 3;
       gfx_y = t + 1;
       gfx_printf("%d",i+1);
@@ -369,7 +368,7 @@ function DrawGrid(idx, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
     now = time_precise();
     loop(max_hist,
       birth = v_history_time[i];
-      (birth != 0) && (v_history_div[i] == idx) ? (
+      (birth != 0) && (v_history_chan[i] == chan) ? (
         hit = v_history_hits[i];
         age = min(max_age, now - birth);
         age_brightness = 0.2 + 1/(0.8*(1+age));
