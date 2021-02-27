@@ -236,7 +236,7 @@ function recordTraining()
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    noteStatus = msg1 & $xF0;
    channel = msg1 & 0x0F;
-   
+
    play_state && noteStatus==note_on && msg3!=0 ? (
      note_count += 1;
      note = msg2;
@@ -290,6 +290,8 @@ function printCenter(x,y,str) local(w,h)
   gfx_x = x-w/2;
   gfx_y = y;
   gfx_printf(str);
+  gfx_line(x-w/2,y+h,x+w/2,y+h);
+  gfx_line(x,y+h,x,y+h+2);
 );
 
 function printBottomLeft(x,y,str) local(w,h)
@@ -361,7 +363,7 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
     );
     i+=1;
   );
-  gfx_setfont(0);
+  gfx_setfont(2, "Arial", 14);
   
   play_state ? (
     i=0;
@@ -447,7 +449,7 @@ rgb(0.67, 0.67, 0.67);
 loop(max_graph/10,
   (i%60 == 0) ?
     (gfx_line(xmargin + i*graph_x_ratio, graph_top, xmargin + i*graph_x_ratio, graph_top+graph_height);
-    sprintf(str, "%2d", 1+i/60);
+    sprintf(str, "%2d:00", 1+i/60);
     printBottomLeft(xmargin + (i+60)*graph_x_ratio-1, graph_top + graph_height, str))
   : verticalDashedLine(xmargin + i*graph_x_ratio, graph_top, graph_top+graph_height, 4, 5);
   i += 10;);
