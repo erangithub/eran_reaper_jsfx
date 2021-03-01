@@ -11,7 +11,7 @@
 *  GNU General Public License (http://www.gnu.org/licenses/)for more details.  *
 *******************************************************************************/
 
-desc: A tool for practicing rhythm. Filters notes which are aligned to a groove.
+desc: MIDI Rhythm Trainer
 //author: Eran Talmor (C) 2021
 slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
