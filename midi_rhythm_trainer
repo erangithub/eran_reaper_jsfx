@@ -16,29 +16,44 @@ desc: MIDI Rhythm Trainer
 slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
 slider3:0<0,3,1{CH 1/4/9/13,CH 2/6/10/14,CH 3/7/11/15,CH 4/8/12/16}>Select Channel
-slider4:8<0,64,1>Channel Divisions
-slider5:0<-0.5,0.5,0.01>Channel Swing
-slider6:0<0,1,0.01>Channel Phase
-slider7:50<1,100,0.1>Error Bound (%)
-slider8:1<0,1,1{Off,On}>Auto Shrink Error Bound
-slider9:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
+slider4:8<0,64,1>Channel/Divisions
+slider5:0<-0.5,0.5,0.01>Channel/Swing
+slider6:0<0,1,0.01>Channel/Phase
+slider7:0<0,1,1{0: Off,1: On}>Channel/Click
+slider8:0<0,127,1{0: C0,1: C#0,2: D0,3: Eb0,4: E0,5: F0,6: F#0,7: G0,8: G#0,9: A0,10: Bb0,11: B0,12: C1,13: C#1,14: D1,15: Eb1,16: E1,17: F1,18: F#1,19: G1,20: G#1,21: A1,22: Bb1,23: B1,24: C2,25: C#2,26: D2,27: Eb2,28: E2,29: F2,30: F#2,31: G2,32: G#2,33: A2,34: Bb2,35: B2,36: C3,37: C#3,38: D3,39: Eb3,40: E3,41: F3,42: F#3,43: G3,44: G#3,45: A3,46: Bb3,47: B3,48: C4,49: C#4,50: D4,51: Eb4,52: E4,53: F4,54: F#4,55: G4,56: G#4,57: A4,58: Bb4,59: B4,60: C5,61: C#5,62: D5,63: Eb5,64: E5,65: F5,66: F#5,67: G5,68: G#5,69: A5,70: Bb5,71: B5,72: C6,73: C#6,74: D6,75: Eb6,76: E6,77: F6,78: F#6,79: G6,80: G#6,81: A6,82: Bb6,83: B6,84: C7,85: C#7,86: D7,87: Eb7,88: E7,89: F7,90: F#7,91: G7,92: G#7,93: A7,94: Bb7,95: B7,96: C8,97: C#8,98: D8,99: Eb8,100: E8,101: F8,102: F#8,103: G8,104: G#8,105: A8,106: Bb8,107: B8,108: C9,109: C#9,110: D9,111: Eb9,112: E9,113: F9,114: F#9,115: G9,116: G#9,117: A9,118: Bb9,119: B9,120: C10,121: C#10,122: D10,123: Eb10,124: E10,125: F10,126: F#10,127: G10}>Channel/Click/Note
+slider9:0<0,127,1>Channel/Click/Velocity
+slider10:50<1,100,0.1>Error Bound (%)
+slider11:1<0,1,1{Off,On}>Auto Shrink Error Bound
+slider12:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
 
 // Hidden sliders per channel
 slider20:8<1,64,1>-Divisions1
 slider21:0<-0.5,0.5,0.01>-Swing1
 slider22:0<0,1,0.01>-Phase1
+slider23:0<0,1,1>-Click1
+slider24:60<0,127,1>-ClickNote1
+slider25:60<0,127,1>-ClickVel1
 
 slider30:0<0,64,1>-Divisions2
 slider31:0<-0.5,0.5,0.01>-Swing2
 slider32:0<0,1,0.01>-Phase2
+slider33:0<0,1,1>-Click2
+slider34:62<0,127,1>-ClickNote2
+slider35:60<0,127,1>-ClickVel2
 
 slider40:0<0,64,1>-Divisions3
 slider41:0<-0.5,0.5,0.01>-Swing3
 slider42:0<0,1,0.01>-Phase3
+slider43:0<0,1,1>-Click3
+slider44:64<0,127,1>-ClickNote3
+slider45:60<0,127,1>-ClickVel3
 
 slider50:0<0,64,1>-Divisions4
 slider51:0<-0.5,0.5,0.01>-Swing4
 slider52:0<0,1,0.01>-Phase4
+slider53:0<0,1,1>-Click4
+slider54:65<0,127,1>-ClickNote4
+slider55:60<0,127,1>-ClickVel4
 
 @init
 note_on = $x90;
@@ -121,6 +136,30 @@ function getPhase(idx)
   : phase3;
 );
 
+function getClick(idx)
+(
+  idx == 0 ? click0 
+  : idx == 1 ? click1 
+  : idx == 2 ? click2
+  : click3;
+);
+
+function getClickNote(idx)
+(
+  idx == 0 ? click_note0 
+  : idx == 1 ? click_note1 
+  : idx == 2 ? click_note2
+  : click_note3;
+);
+
+function getClickVel(idx)
+(
+  idx == 0 ? click_vel0 
+  : idx == 1 ? click_vel1 
+  : idx == 2 ? click_vel2
+  : click_note3;
+);
+
 function isRecording()
 (
   play_state && enable_recording && (entry_mode == 1) && ((beat_position) < beats)
@@ -186,39 +225,51 @@ function isHit(reltime, chan) local(i, hit, min_late, min_early, delta_early, de
 beats = slider1;
 entry_mode = slider2;
 
-error_bound = slider7/100;
-auto_shrink = slider8;
-event_style = slider9;
+error_bound = slider10/100;
+auto_shrink = slider11;
+event_style = slider12;
 
 select = slider3;
 select != prev_select ?
-  ( select == 0 ? (slider4 = slider20; slider5 = slider21; slider6 = slider22)
-  : select == 1 ? (slider4 = slider30; slider5 = slider31; slider6 = slider32)
-  : select == 2 ? (slider4 = slider40; slider5 = slider41; slider6 = slider42)
-  : select == 3 ? (slider4 = slider50; slider5 = slider51; slider6 = slider52))
+  ( select == 0 ? (slider4 = slider20; slider5 = slider21; slider6 = slider22; slider7 = slider23; slider8 = slider24; slider9 = slider25)
+  : select == 1 ? (slider4 = slider30; slider5 = slider31; slider6 = slider32; slider7 = slider33; slider8 = slider34; slider9 = slider35)
+  : select == 2 ? (slider4 = slider40; slider5 = slider41; slider6 = slider42; slider7 = slider43; slider8 = slider44; slider9 = slider45)
+  : select == 3 ? (slider4 = slider50; slider5 = slider51; slider6 = slider52; slider7 = slider53; slider8 = slider54; slider9 = slider55))
   
-: ( select == 0 ? (slider20 = max(1,slider4); slider21 = slider5; slider22 = slider6)
-  : select == 1 ? (slider30 = slider4; slider31 = slider5; slider32 = slider6)
-  : select == 2 ? (slider40 = slider4; slider41 = slider5; slider42 = slider6)
-  : select == 3 ? (slider50 = slider4; slider51 = slider5; slider52 = slider6));
+: ( select == 0 ? (slider20 = max(1,slider4); slider21 = slider5; slider22 = slider6; slider23 = slider7; slider24 = slider8; slider25 = slider9)
+  : select == 1 ? (slider30 = slider4; slider31 = slider5; slider32 = slider6; slider33 = slider7; slider34 = slider8; slider35 = slider9)
+  : select == 2 ? (slider40 = slider4; slider41 = slider5; slider42 = slider6; slider43 = slider7; slider44 = slider8; slider45 = slider9)
+  : select == 3 ? (slider50 = slider4; slider51 = slider5; slider52 = slider6; slider53 = slider7; slider54 = slider8; slider55 = slider9));
   
 prev_select = select;
 
 div0 = slider20;
 swing0 = slider21;
 phase0 = slider22;
+click0 = slider23;
+click_note0 = slider24;
+click_vel0 = slider25;
 
 div1 = slider30;
 swing1 = slider31;
 phase1 = slider32;
+click1 = slider33;
+click_note1 = slider34;
+click_vel1 = slider35;
 
 div2 = slider40;
 swing2 = slider41;
 phase2 = slider42;
+click2 = slider43;
+click_note2 = slider44;
+click_vel2 = slider45;
 
 div3 = slider50;
 swing3 = slider51;
 phase3 = slider52;
+click3 = slider53;
+click_note3 = slider54;
+click_vel3 = slider55;
 
 max_divs = max(div0, max(div1, max(div2, div3)));
 
@@ -229,13 +280,13 @@ resetPlay();
 function playGrid(chan, reset) local(sp_per_beat, sp_now, divs, sp_grid)
 (
   (v_play_off_timers[chan] < samplesblock) ? (
-    midisend(max(0, v_play_off_timers[chan]), $x90, 60+chan, 0);
+    midisend(max(0, v_play_off_timers[chan]), $x90, getClickNote(chan), 0);
     v_play_off_timers[chan] = 1000000;
   );
   
   // find next "grid line" such that timer will be >= sampleblock
   (v_play_timers[chan] < samplesblock) ? (
-    (v_play_timers[chan] >= 0 ? midisend(max(0, v_play_timers[chan]), $x90, 60+chan, 60));
+    (v_play_timers[chan] >= 0 ? midisend(max(0, v_play_timers[chan]), $x90, getClickNote(chan), getClickVel(chan)));
     sp_per_beat = srate * 60 / tempo;
     sp_now = floor(0.001 + beat_position * sp_per_beat);
     divs = getDivs(chan);
@@ -277,10 +328,10 @@ function recordTraining() local(t)
 );
 
 play_state ? (
-  playGrid(0, 0);
-  div1 ? playGrid(1, 1);
-  div2 ? playGrid(2, 1);
-  div3 ? playGrid(3, 1);
+  getClick(0) ? playGrid(0, 0);
+  getClick(1) && div1 ? playGrid(1, 1);
+  getClick(2) && div2 ? playGrid(2, 1);
+  getClick(3) && div3 ? playGrid(3, 1);
 );
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    noteStatus = msg1 & $xF0;
