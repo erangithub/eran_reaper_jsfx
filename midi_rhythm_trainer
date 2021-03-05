@@ -230,18 +230,54 @@ auto_shrink = slider11;
 event_style = slider12;
 
 select = slider3;
+
 select != prev_select ?
   ( select == 0 ? (slider4 = slider20; slider5 = slider21; slider6 = slider22; slider7 = slider23; slider8 = slider24; slider9 = slider25)
   : select == 1 ? (slider4 = slider30; slider5 = slider31; slider6 = slider32; slider7 = slider33; slider8 = slider34; slider9 = slider35)
   : select == 2 ? (slider4 = slider40; slider5 = slider41; slider6 = slider42; slider7 = slider43; slider8 = slider44; slider9 = slider45)
   : select == 3 ? (slider4 = slider50; slider5 = slider51; slider6 = slider52; slider7 = slider53; slider8 = slider54; slider9 = slider55))
   
-: ( select == 0 ? (slider20 = max(1,slider4); slider21 = slider5; slider22 = slider6; slider23 = slider7; slider24 = slider8; slider25 = slider9)
-  : select == 1 ? (slider30 = slider4; slider31 = slider5; slider32 = slider6; slider33 = slider7; slider34 = slider8; slider35 = slider9)
-  : select == 2 ? (slider40 = slider4; slider41 = slider5; slider42 = slider6; slider43 = slider7; slider44 = slider8; slider45 = slider9)
-  : select == 3 ? (slider50 = slider4; slider51 = slider5; slider52 = slider6; slider53 = slider7; slider54 = slider8; slider55 = slider9));
-  
+: (
+  (slider4 != prev_slider4 ?
+    ( select == 0 ? slider20 = max(1, slider4)
+    : select == 1 ? slider30 = slider4
+    : select == 2 ? slider40 = slider4
+    : select == 3 ? slider50 = slider4));
+  (slider5 != prev_slider5 ?
+    ( select == 0 ? slider21 = slider5
+    : select == 1 ? slider31 = slider5
+    : select == 2 ? slider41 = slider5
+    : select == 3 ? slider51 = slider5));
+  (slider6 != prev_slider6 ?
+    ( select == 0 ? slider22 = slider6
+    : select == 1 ? slider32 = slider6
+    : select == 2 ? slider42 = slider6
+    : select == 3 ? slider52 = slider6));
+  (slider7 != prev_slider7 ?
+    ( select == 0 ? slider23 = slider7
+    : select == 1 ? slider33 = slider7
+    : select == 2 ? slider43 = slider7
+    : select == 3 ? slider53 = slider7));
+  (slider8 != prev_slider8 ?
+    ( select == 0 ? slider24 = slider8
+    : select == 1 ? slider34 = slider8
+    : select == 2 ? slider44 = slider8
+    : select == 3 ? slider54 = slider8));
+  (slider9 != prev_slider8 ?
+    ( select == 0 ? slider25 = slider9
+    : select == 1 ? slider35 = slider9
+    : select == 2 ? slider45 = slider9
+    : select == 3 ? slider55 = slider9));
+);
+
 prev_select = select;
+
+prev_slider4 = slider4;
+prev_slider5 = slider5;
+prev_slider6 = slider6;
+prev_slider7 = slider7;
+prev_slider8 = slider8;
+prev_slider9 = slider9;
 
 div0 = slider20;
 swing0 = slider21;
