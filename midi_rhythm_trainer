@@ -13,6 +13,7 @@
 
 desc: MIDI Rhythm Trainer
 //author: Eran Talmor (C) 2021
+    
 slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
 slider3:0<0,3,1{CH 1/4/9/13,CH 2/6/10/14,CH 3/7/11/15,CH 4/8/12/16}>Select Channel
@@ -57,6 +58,10 @@ slider55:60<0,127,1>-ClickVel4
 
 @init
 note_on = $x90;
+
+control_phase = 1;
+control_swing = 2;
+
 
 hist_idx = 0;
 max_hist = 200;
@@ -118,6 +123,17 @@ function getDivs(idx)
   : div3;
 );
 
+function setDivs(chan, value)
+(
+  (entry_mode == 1) ? 0
+  : chan == 0 ? (slider20 = value; slider_automate(slider20); div0=max(1,min(64,value)))
+  : chan == 1 ? (slider30 = value; slider_automate(slider30); div1=max(1,min(64,value)))
+  : chan == 2 ? (slider40 = value; slider_automate(slider40); div2=max(1,min(64,value)))
+  : (slider50 = value; slider_automate(slider50); div3=max(1,min(64,value)));
+  max_divs = max(div0, max(div1, max(div2, div3)));
+  resetPlay();
+);
+
 function getSwing(idx)
 ( 
   (entry_mode == 1) ? 0
@@ -127,6 +143,16 @@ function getSwing(idx)
   : swing3;
 );
 
+function setSwing(chan, value)
+(
+  ((entry_mode == 1) ? 0
+  : chan == 0 ? (slider21 = value; slider_automate(slider21); swing0=value)
+  : chan == 1 ? (slider31 = value; slider_automate(slider31); swing1=value)
+  : chan == 2 ? (slider41 = value; slider_automate(slider41); swing2=value)
+  : (slider51 = value; slider_automate(slider51); swing3=value););
+  
+);
+
 function getPhase(idx)
 ( 
   (entry_mode == 1) ? 0
@@ -134,6 +160,15 @@ function getPhase(idx)
   : idx == 1 ? phase1 
   : idx == 2 ? phase2
   : phase3;
+);
+
+function setPhase(chan, value)
+(
+  (entry_mode == 1) ? 0
+  : chan == 0 ? (slider22 = value; slider_automate(slider22); phase0=value)
+  : chan == 1 ? (slider32 = value; slider_automate(slider32); phase1=value)
+  : chan == 2 ? (slider42 = value; slider_automate(slider42); phase2=value)
+  : (slider52 = value; slider_automate(slider52); phase3=value)
 );
 
 function getClick(idx)
@@ -369,6 +404,7 @@ play_state ? (
   getClick(2) && div2 ? playGrid(2, 1);
   getClick(3) && div3 ? playGrid(3, 1);
 );
+
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    noteStatus = msg1 & $xF0;
    channel = msg1 & 0x0F;
@@ -428,6 +464,30 @@ function printCenter(x,y,str) local(w,h)
   gfx_x = x-w/2;
   gfx_y = y;
   gfx_printf(str);
+);
+
+function printValueEdit(x,y,str) local(w,h, margin)
+(
+  rgb(1,1,1);
+  //gfx_setfont(1, "Arial", 18);
+  gfx_measurestr(str,w,h);
+  gfx_a=0.16;
+  margin=4;
+  gfx_rect(x-w/2-margin, y-h/2-margin, w+margin*2, h+margin*2);
+  gfx_a=1;
+  gfx_x = x-w/2;
+  gfx_y = y-h/2;
+  rgb(1,1,1);
+  gfx_printf(str);
+);
+
+
+function printCenterUnderline(x,y,str)
+(
+  gfx_measurestr(str,w,h);
+  gfx_x = x-w/2;
+  gfx_y = y;
+  gfx_printf(str);
   gfx_line(x-w/2,y+h,x+w/2,y+h);
   gfx_line(x,y+h,x,y+h+2);
 );
@@ -436,6 +496,14 @@ function printBottomLeft(x,y,str) local(w,h)
 (
   gfx_measurestr(str,w,h);
   gfx_x = x-w;
+  gfx_y = y-h;
+  gfx_printf(str);
+);
+
+function printBottomRight(x,y,str) local(w,h)
+(
+  gfx_measurestr(str,w,h);
+  gfx_x = x;
   gfx_y = y-h;
   gfx_printf(str);
 );
@@ -453,18 +521,78 @@ function noteName(note) local(names,sharps,nm,sh,str)
 function drawEvent(x, y, note, is_hit) local(str)
 (
   (event_style == 0) ? (is_hit ? gfx_circle(x, y, 6, 1, 1) : (gfx_circle(x, y, 6, 0,1); gfx_circle(x, y, 5, 0,1)))
-: (event_style == 1) ? printCenter(x, y, noteName(note))  
-: (event_style == 2) ? (sprintf(str, "%d", note);  printCenter(x, y, str));
+: (event_style == 1) ? printCenterUnderline(x, y, noteName(note))  
+: (event_style == 2) ? (sprintf(str, "%d", note);  printCenterUnderline(x, y, str));
 );
 
-function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
+function isMouseInRect(l,t,w,h)
 (
+  mouse_x >= l && mouse_x <= l+w && mouse_y >= t && mouse_y <= t+h;
+);
+
+function controlId(chan, control)
+(
+  (chan + 1)*100 + control;
+);
+
+function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, str, resolution, ctrl_id)
+(
+  ctrl_id = controlId(chan, control_phase);
+  
+  mouse_cap & 1 == 0 ?
+    active_control = 0
+  : active_control == ctrl_id ? (
+      dx = orig_value + (mouse_x - orig_x)*divs/w/2;
+      resolution = mouse_cap & 4 ? 12 : 360;  
+      dx = floor(dx*resolution + 0.5) / resolution;
+      setPhase(chan, max(0, min(1, dx)));
+    ) 
+  : active_control == 0 && focus_control == ctrl_id ? (
+      active_control = focus_control;
+      orig_value = getPhase(chan);
+      orig_x = mouse_x;
+  );
+  
+  (active_control == ctrl_id || focus_control == ctrl_id) ? (
+    sprintf(str, "Phase: %0.2f", getPhase(chan));
+    printValueEdit(l+w/2, t+h/2, str);
+  );
+);
+
+function dragSwing(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, str, resolution, ctrl_id)
+(
+  ctrl_id = controlId(chan, control_swing);
+  
+  mouse_cap & 1 == 0 ?
+    active_control = 0
+  : active_control == ctrl_id ? (
+      dx = orig_value + (mouse_x - orig_x)*divs/w/2;
+      resolution = mouse_cap & 4 ? 12 : 360;  
+      dx = floor(dx*resolution + 0.5) / resolution;
+      setSwing(chan, max(-0.5, min(0.5, dx)));
+    ) 
+  : active_control == 0 && focus_control == ctrl_id ? (
+      active_control = focus_control;
+      orig_value = getSwing(chan);
+      orig_x = mouse_x;
+  );
+  
+  (active_control == ctrl_id || focus_control == ctrl_id) ? (
+    sprintf(str, "Swing: %0.2f", getSwing(chan));
+    printValueEdit(l+w/2, t+h/2, str);
+  );
+);
+
+function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_control)
+(
+  focus_control = 0;
+  
   rgb(0.27, 0.27, 0.27);
   gfx_rect(l, t, isRecording() ? w * getRelTime() : w, h);
 
   // Draw "grid" area
   divs = getDivs(chan);
-  
+    
   !isRecording() ? (
     // Draw green areas
     rgb(0, 0.4, 0);
@@ -479,11 +607,32 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
   
   // Draw dashed rhythm lines
   i=0;
-  rgb(0.67, 0.67, 0.67);
+  ctrl_phase_id = controlId(chan, control_phase);
+  ctrl_swing_id = controlId(chan, control_swing);
   loop(divs, 
     grid = l+getGrid(chan, divs, i)*w;
+    ((i+1)%2) && ((!active_control && isMouseInRect(grid-8, t, 16, h)) || (active_control == ctrl_phase_id)) ? (
+      focus_control = ctrl_phase_id;
+      rgb(0,0.5,1);
+      gfx_rect(grid-6, t, 12, h);
+    );
+    (i%2) && ((!active_control && isMouseInRect(grid-8, t, 16, h)) || (active_control == ctrl_swing_id)) ? (
+      focus_control = ctrl_swing_id;
+      rgb(0.5,0,1);
+      gfx_rect(grid-6, t, 12, h);
+    );
+    rgb(0.67, 0.67, 0.67);
     verticalDashedLine(grid, t, t+h, 1, 5);
+    sprintf(str, "%d", i+1);
+    gfx_setfont(1, "Arial", 12);
+    printBottomRight(grid+3,t+h,str);
     i+=1;
+  );
+  
+  // Check Mouse Wheel to change number of divisions
+  mouse_wheel && isMouseInRect(l,t,w,h) ? (
+    setDivs(chan, mouse_wheel > 0 ? divs+1 : divs-1);
+    mouse_wheel = 0;
   );
   
   // Draw beat marks
@@ -501,7 +650,7 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
     );
     i+=1;
   );
-  gfx_setfont(2, "Arial", 14);
+  gfx_setfont(1, "Arial", 14);
   
   play_state ? (
     i=0;
@@ -532,6 +681,10 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs)
   gfx_setfont(1, "Arial", 48);
   isRecording() ? (printCenter(w/2, h/2, "RECORDING"));
   gfx_setfont(0);  
+ 
+  dragPhase(chan,focus_control,divs, l, t, w, h);
+  dragSwing(chan,focus_control,divs, l, t, w, h);
+  
   drawFrame(l-1, t-1, w+2, h+2);
 );
 
@@ -542,7 +695,7 @@ footer_margin = 4;
 gfx_x = xmargin;
 gfx_y = 1;
 rgb(1,1,1);
-gfx_setfont(3, "Arial", 15);
+gfx_setfont(1, "Arial", 15);
 gfx_printf("Rhythm Grid:");
 
 width = gfx_w-xmargin*2;
@@ -565,7 +718,7 @@ graph_height = max(80, gfx_h - footer_margin - graph_top);
 
 gfx_x = xmargin;
 gfx_y = graph_top-20;
-gfx_setfont(3, "Arial", 15);
+gfx_setfont(1, "Arial", 15);
 rgb(1,1,1);
 gfx_printf("Training Graph (");
 rgb(1,1,0);
@@ -580,7 +733,7 @@ gfx_printf(")");
 rgb(0.27, 0.27, 0.4); // greyish purple
 gfx_rect(xmargin, graph_top, width, graph_height);
 
-gfx_setfont(3, "Arial", 12);
+gfx_setfont(1, "Arial", 12);
 graph_x_ratio = width/(max_graph-1);
 i=0;
 rgb(0.67, 0.67, 0.67); 
