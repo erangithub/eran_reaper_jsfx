@@ -18,11 +18,7 @@ slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
 slider3:0<0,3,1{CH 1/4/9/13,CH 2/6/10/14,CH 3/7/11/15,CH 4/8/12/16}>Select Channel
 slider4:8<0,64,1>Channel/Divisions
-slider5:0<-0.5,0.5,0.01>Channel/Swing
-slider6:0<0,1,0.01>Channel/Phase
-slider7:0<0,1,1{0: Off,1: On}>Channel/Click
 slider8:0<0,127,1{0: C0,1: C#0,2: D0,3: Eb0,4: E0,5: F0,6: F#0,7: G0,8: G#0,9: A0,10: Bb0,11: B0,12: C1,13: C#1,14: D1,15: Eb1,16: E1,17: F1,18: F#1,19: G1,20: G#1,21: A1,22: Bb1,23: B1,24: C2,25: C#2,26: D2,27: Eb2,28: E2,29: F2,30: F#2,31: G2,32: G#2,33: A2,34: Bb2,35: B2,36: C3,37: C#3,38: D3,39: Eb3,40: E3,41: F3,42: F#3,43: G3,44: G#3,45: A3,46: Bb3,47: B3,48: C4,49: C#4,50: D4,51: Eb4,52: E4,53: F4,54: F#4,55: G4,56: G#4,57: A4,58: Bb4,59: B4,60: C5,61: C#5,62: D5,63: Eb5,64: E5,65: F5,66: F#5,67: G5,68: G#5,69: A5,70: Bb5,71: B5,72: C6,73: C#6,74: D6,75: Eb6,76: E6,77: F6,78: F#6,79: G6,80: G#6,81: A6,82: Bb6,83: B6,84: C7,85: C#7,86: D7,87: Eb7,88: E7,89: F7,90: F#7,91: G7,92: G#7,93: A7,94: Bb7,95: B7,96: C8,97: C#8,98: D8,99: Eb8,100: E8,101: F8,102: F#8,103: G8,104: G#8,105: A8,106: Bb8,107: B8,108: C9,109: C#9,110: D9,111: Eb9,112: E9,113: F9,114: F#9,115: G9,116: G#9,117: A9,118: Bb9,119: B9,120: C10,121: C#10,122: D10,123: Eb10,124: E10,125: F10,126: F#10,127: G10}>Channel/Click/Note
-slider9:0<0,127,1>Channel/Click/Velocity
 slider10:50<1,100,0.1>Error Bound (%)
 slider11:1<0,1,1{Off,On}>Auto Shrink Error Bound
 slider12:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
@@ -61,6 +57,11 @@ note_on = $x90;
 
 control_phase = 1;
 control_swing = 2;
+control_button_div_up = 3;
+control_button_div_down = 4;
+control_button_click = 5;
+control_button_vel_up = 6;
+control_button_vel_down = 7;
 
 
 hist_idx = 0;
@@ -179,6 +180,14 @@ function getClick(idx)
   : click3;
 );
 
+function setClick(chan, value)
+(
+  chan == 0 ? (slider23 = value; slider_automate(slider23); click0=max(0,min(1,value)))
+  : chan == 1 ? (slider33 = value; slider_automate(slider33); click1=max(0,min(1,value)))
+  : chan == 2 ? (slider43 = value; slider_automate(slider43); click2=max(0,min(1,value)))
+  : (slider53 = value; slider_automate(slider53); click3=max(0,min(1,value)));
+);
+
 function getClickNote(idx)
 (
   idx == 0 ? click_note0 
@@ -193,6 +202,14 @@ function getClickVel(idx)
   : idx == 1 ? click_vel1 
   : idx == 2 ? click_vel2
   : click_note3;
+);
+
+function setClickVel(chan, value)
+(
+  chan == 0 ? (slider25 = value; click_vel0 = max(0, min(127, value)))
+  : chan == 1 ? (slider35 = value; click_vel1 = max(0, min(127, value)))
+  : chan == 2 ? (slider45 = value; click_vel2 = max(0, min(127, value)))
+  : chan == 3 ? (slider45 = value; click_vel3 = max(0, min(127, value)));
 );
 
 function isRecording()
@@ -267,10 +284,10 @@ event_style = slider12;
 select = slider3;
 
 select != prev_select ?
-  ( select == 0 ? (slider4 = slider20; slider5 = slider21; slider6 = slider22; slider7 = slider23; slider8 = slider24; slider9 = slider25)
-  : select == 1 ? (slider4 = slider30; slider5 = slider31; slider6 = slider32; slider7 = slider33; slider8 = slider34; slider9 = slider35)
-  : select == 2 ? (slider4 = slider40; slider5 = slider41; slider6 = slider42; slider7 = slider43; slider8 = slider44; slider9 = slider45)
-  : select == 3 ? (slider4 = slider50; slider5 = slider51; slider6 = slider52; slider7 = slider53; slider8 = slider54; slider9 = slider55))
+  ( select == 0 ? (slider4 = slider20; slider8 = slider24)
+  : select == 1 ? (slider4 = slider30; slider8 = slider34)
+  : select == 2 ? (slider4 = slider40; slider8 = slider44)
+  : select == 3 ? (slider4 = slider50; slider8 = slider54))
   
 : (
   (slider4 != prev_slider4 ?
@@ -278,41 +295,17 @@ select != prev_select ?
     : select == 1 ? slider30 = slider4
     : select == 2 ? slider40 = slider4
     : select == 3 ? slider50 = slider4));
-  (slider5 != prev_slider5 ?
-    ( select == 0 ? slider21 = slider5
-    : select == 1 ? slider31 = slider5
-    : select == 2 ? slider41 = slider5
-    : select == 3 ? slider51 = slider5));
-  (slider6 != prev_slider6 ?
-    ( select == 0 ? slider22 = slider6
-    : select == 1 ? slider32 = slider6
-    : select == 2 ? slider42 = slider6
-    : select == 3 ? slider52 = slider6));
-  (slider7 != prev_slider7 ?
-    ( select == 0 ? slider23 = slider7
-    : select == 1 ? slider33 = slider7
-    : select == 2 ? slider43 = slider7
-    : select == 3 ? slider53 = slider7));
   (slider8 != prev_slider8 ?
     ( select == 0 ? slider24 = slider8
     : select == 1 ? slider34 = slider8
     : select == 2 ? slider44 = slider8
     : select == 3 ? slider54 = slider8));
-  (slider9 != prev_slider8 ?
-    ( select == 0 ? slider25 = slider9
-    : select == 1 ? slider35 = slider9
-    : select == 2 ? slider45 = slider9
-    : select == 3 ? slider55 = slider9));
 );
 
 prev_select = select;
 
 prev_slider4 = slider4;
-prev_slider5 = slider5;
-prev_slider6 = slider6;
-prev_slider7 = slider7;
 prev_slider8 = slider8;
-prev_slider9 = slider9;
 
 div0 = slider20;
 swing0 = slider21;
@@ -429,6 +422,13 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
 prev_play_state = play_state;
 
 @gfx
+#value_edit = "";
+
+function isLButtonRelease()
+(
+  (1 ~ mouse_cap) & prev_mouse_cap & 1;
+);
+
 function rgb(r,g,b) 
 (
   gfx_r = r;
@@ -462,23 +462,27 @@ function printCenter(x,y,str) local(w,h)
 (
   gfx_measurestr(str,w,h);
   gfx_x = x-w/2;
-  gfx_y = y;
+  gfx_y = y-h/2;
   gfx_printf(str);
 );
 
-function printValueEdit(x,y,str) local(w,h, margin)
+function printValueEdit(x,y) local(w,h, margin)
 (
-  rgb(1,1,1);
-  //gfx_setfont(1, "Arial", 18);
-  gfx_measurestr(str,w,h);
-  gfx_a=0.16;
-  margin=4;
-  gfx_rect(x-w/2-margin, y-h/2-margin, w+margin*2, h+margin*2);
-  gfx_a=1;
-  gfx_x = x-w/2;
-  gfx_y = y-h/2;
-  rgb(1,1,1);
-  gfx_printf(str);
+  (strlen(#value_edit) > 0) ? 
+  (
+    rgb(1,1,1);
+    gfx_setfont(1, "Arial", 24);
+    gfx_measurestr(#value_edit,w,h);
+    gfx_a=0.16;
+    margin=4;
+    gfx_rect(x-w/2-margin, y-h/2-margin, w+margin*2, h+margin*2);
+    gfx_a=1;
+    gfx_x = x-w/2;
+    gfx_y = y-h/2;
+    rgb(1,1,1);
+    gfx_printf(#value_edit);
+    #value_edit = "";
+  );
 );
 
 
@@ -535,13 +539,11 @@ function controlId(chan, control)
   (chan + 1)*100 + control;
 );
 
-function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, str, resolution, ctrl_id)
+function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
 (
   ctrl_id = controlId(chan, control_phase);
   
-  mouse_cap & 1 == 0 ?
-    active_control = 0
-  : active_control == ctrl_id ? (
+  active_control == ctrl_id ? (
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
@@ -554,18 +556,16 @@ function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
   );
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
-    sprintf(str, "Phase: %0.2f", getPhase(chan));
-    printValueEdit(l+w/2, t+h/2, str);
+    sprintf(#value_edit, "Phase: %0.2f", getPhase(chan));
+    //printValueEdit(l+w/2, t+h/2, #value_edit);
   );
 );
 
-function dragSwing(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, str, resolution, ctrl_id)
+function dragSwing(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
 (
   ctrl_id = controlId(chan, control_swing);
   
-  mouse_cap & 1 == 0 ?
-    active_control = 0
-  : active_control == ctrl_id ? (
+  active_control == ctrl_id ? (
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
@@ -578,13 +578,75 @@ function dragSwing(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
   );
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
-    sprintf(str, "Swing: %0.2f", getSwing(chan));
-    printValueEdit(l+w/2, t+h/2, str);
+    sprintf(#value_edit, "Swing: %0.2f", getSwing(chan));
+    //printValueEdit(l+w/2, t+h/2, str);
   );
+);
+
+function emptyRect(l,t,w,h)
+(
+  gfx_x = l;
+  gfx_y = t;
+  gfx_lineto(l+w,t);
+  gfx_lineto(l+w,t+h);
+  gfx_lineto(l,t+h);
+  gfx_lineto(l,t);
+);
+
+function drawButton(chan, id, l, t, w, h, str, state) local(focus, button_id, focus_brightness, state_brightness, press_brighness, delta)
+(
+  button_id = controlId(chan, id);
+  !active_control && isMouseInRect(l,t,w,h) && mouse_cap & 1 ? active_control = button_id;
+  focus = (!active_control || active_control == button_id) && isMouseInRect(l,t,w,h);
+  focus_brightness = 0.1 * focus;
+  state_brightness = 0.5 * state;
+  press_brightness = 0.2 * focus * (mouse_cap & 1);
+  delta = focus_brightness - press_brightness;
+  rgb(delta, delta+state_brightness, delta+state_brightness);
+  gfx_rect(l,t,w,h);
+  rgb(0.5+delta, 0.5+delta, 0.5+delta);
+  emptyRect(l,t,w,h);
+  rgb(1,1,1);
+  rgb(0.7+delta, 0.7+delta, 0.7+delta);
+  printCenter(l+w/2, t+h/2, str);
+  focus;
+);
+
+function drawToolBar(chan, l, t, w, h) local(release, f1, f2, f3, f4, f5, button_top)
+(
+  gfx_setfont(1, "Arial", 14);
+  release = isLButtonRelease();
+  mouse_wheel_dir = mouse_wheel > 0 ? 1 : mouse_wheel < 0 ? -1 : 0;
+  button_top = t;
+  f1 = drawButton(chan, control_div_up, l+4, button_top, w-4, w-4, "+", 0);
+  button_top += w;
+  f2 = drawButton(chan, control_div_down, l+4, button_top, w-4, w-4, "-", 0);
+  button_top += w;
+  button_top += 4;
+  f5 = drawButton(chan, control_click, l+4, button_top, w-4, w-4, "c", getClick(chan));
+  button_top += w;
+  f3 = drawButton(chan, control_vel_up, l+4, button_top, w-4, w-4, "v+", 0);
+  button_top += w;
+  f4 = drawButton(chan, control_vel_down, l+4, button_top, w-4, w-4, "v-", 0);
+  button_top += w;
+  release && f1 ? setDivs(chan, getDivs(chan)+1); 
+  release && f2 ? setDivs(chan, getDivs(chan)-1); 
+  release && f3 ? setClickVel(chan, floor(getClickVel(chan)/4)*4+4); 
+  release && f4 ? setClickVel(chan, floor(getClickVel(chan)/4)*4-4);
+  release && f5 ? setClick(chan, !getClick(chan)); 
+  f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(chan));
+  f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(chan));
+  f1 || f2 && mouse_wheel_dir ? setDivs(chan, getDivs(chan)+mouse_wheel_dir);
+  f3 || f4 && mouse_wheel_dir ? setClickVel(chan, getClickVel(chan)+mouse_wheel_dir);
+  f5 ? sprintf(#value_edit, "Click: %s", getClick(chan) ? "On" : "Off");
 );
 
 function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_control)
 (
+  toolbar_width = 20;
+  w -= toolbar_width;
+  drawToolBar(chan, l+w,t,toolbar_width,h);
+  
   focus_control = 0;
   
   rgb(0.27, 0.27, 0.27);
@@ -613,7 +675,7 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_
     grid = l+getGrid(chan, divs, i)*w;
     ((i+1)%2) && ((!active_control && isMouseInRect(grid-8, t, 16, h)) || (active_control == ctrl_phase_id)) ? (
       focus_control = ctrl_phase_id;
-      rgb(0,0.5,1);
+      rgb(0,0.5,0.5);
       gfx_rect(grid-6, t, 12, h);
     );
     (i%2) && ((!active_control && isMouseInRect(grid-8, t, 16, h)) || (active_control == ctrl_swing_id)) ? (
@@ -628,18 +690,12 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_
     printBottomRight(grid+3,t+h,str);
     i+=1;
   );
-  
-  // Check Mouse Wheel to change number of divisions
-  mouse_wheel && isMouseInRect(l,t,w,h) ? (
-    setDivs(chan, mouse_wheel > 0 ? divs+1 : divs-1);
-    mouse_wheel = 0;
-  );
-  
+    
   // Draw beat marks
   rgb(0.8, 0.8, 0.8);
   (chan == 0) ? gfx_setfont(1, "Arial", 12);
   i=0;
-  loop(beats+1,
+  loop(beats,
     grid = l + i*w/beats;
     gfx_line(grid,t, grid,t+h*0.1);
     gfx_line(grid,t+h*0.9, grid,t+h);
@@ -684,6 +740,8 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_
  
   dragPhase(chan,focus_control,divs, l, t, w, h);
   dragSwing(chan,focus_control,divs, l, t, w, h);
+  
+  printValueEdit(l+w/2, t+h/2);
   
   drawFrame(l-1, t-1, w+2, h+2);
 );
@@ -771,3 +829,7 @@ loop(max_graph,
   i+=1);
 
 drawFrame(xmargin-1, graph_top-1, width+2, graph_height+2);
+
+prev_mouse_cap = mouse_cap;
+mouse_wheel = 0;
+mouse_cap & 1 == 0 ? active_control = 0;
