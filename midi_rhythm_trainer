@@ -16,12 +16,10 @@ desc: MIDI Rhythm Trainer
     
 slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
-slider3:0<0,3,1{CH 1/4/9/13,CH 2/6/10/14,CH 3/7/11/15,CH 4/8/12/16}>Select Channel
-slider4:8<0,64,1>Channel/Divisions
-slider8:0<0,127,1{0: C0,1: C#0,2: D0,3: Eb0,4: E0,5: F0,6: F#0,7: G0,8: G#0,9: A0,10: Bb0,11: B0,12: C1,13: C#1,14: D1,15: Eb1,16: E1,17: F1,18: F#1,19: G1,20: G#1,21: A1,22: Bb1,23: B1,24: C2,25: C#2,26: D2,27: Eb2,28: E2,29: F2,30: F#2,31: G2,32: G#2,33: A2,34: Bb2,35: B2,36: C3,37: C#3,38: D3,39: Eb3,40: E3,41: F3,42: F#3,43: G3,44: G#3,45: A3,46: Bb3,47: B3,48: C4,49: C#4,50: D4,51: Eb4,52: E4,53: F4,54: F#4,55: G4,56: G#4,57: A4,58: Bb4,59: B4,60: C5,61: C#5,62: D5,63: Eb5,64: E5,65: F5,66: F#5,67: G5,68: G#5,69: A5,70: Bb5,71: B5,72: C6,73: C#6,74: D6,75: Eb6,76: E6,77: F6,78: F#6,79: G6,80: G#6,81: A6,82: Bb6,83: B6,84: C7,85: C#7,86: D7,87: Eb7,88: E7,89: F7,90: F#7,91: G7,92: G#7,93: A7,94: Bb7,95: B7,96: C8,97: C#8,98: D8,99: Eb8,100: E8,101: F8,102: F#8,103: G8,104: G#8,105: A8,106: Bb8,107: B8,108: C9,109: C#9,110: D9,111: Eb9,112: E9,113: F9,114: F#9,115: G9,116: G#9,117: A9,118: Bb9,119: B9,120: C10,121: C#10,122: D10,123: Eb10,124: E10,125: F10,126: F#10,127: G10}>Channel/Click/Note
+slider5:1<1,4,1>Number of Channels
 slider10:50<1,100,0.1>Error Bound (%)
 slider11:1<0,1,1{Off,On}>Auto Shrink Error Bound
-slider12:0<0,4,1{Circles,Note Names,Note Numbers>Event Drawing Style
+slider12:0<0,4,1{Circles,Note Names,Note Numbers}>Event Drawing Style
 
 // Hidden sliders per channel
 slider20:8<1,64,1>-Divisions1
@@ -31,21 +29,21 @@ slider23:0<0,1,1>-Click1
 slider24:60<0,127,1>-ClickNote1
 slider25:60<0,127,1>-ClickVel1
 
-slider30:0<0,64,1>-Divisions2
+slider30:8<1,64,1>-Divisions2
 slider31:0<-0.5,0.5,0.01>-Swing2
 slider32:0<0,1,0.01>-Phase2
 slider33:0<0,1,1>-Click2
 slider34:62<0,127,1>-ClickNote2
 slider35:60<0,127,1>-ClickVel2
 
-slider40:0<0,64,1>-Divisions3
+slider40:8<1,64,1>-Divisions3
 slider41:0<-0.5,0.5,0.01>-Swing3
 slider42:0<0,1,0.01>-Phase3
 slider43:0<0,1,1>-Click3
 slider44:64<0,127,1>-ClickNote3
 slider45:60<0,127,1>-ClickVel3
 
-slider50:0<0,64,1>-Divisions4
+slider50:8<1,64,1>-Divisions4
 slider51:0<-0.5,0.5,0.01>-Swing4
 slider52:0<0,1,0.01>-Phase4
 slider53:0<0,1,1>-Click4
@@ -62,6 +60,7 @@ control_button_div_down = 4;
 control_button_click = 5;
 control_button_vel_up = 6;
 control_button_vel_down = 7;
+control_button_note = 8;
 
 
 hist_idx = 0;
@@ -196,6 +195,14 @@ function getClickNote(idx)
   : click_note3;
 );
 
+function setClickNote(chan, value)
+(
+  chan == 0 ? (slider24 = value; click_note0 = max(0, min(127, value)))
+  : chan == 1 ? (slider34 = value; click_note1 = max(0, min(127, value)))
+  : chan == 2 ? (slider44 = value; click_note2 = max(0, min(127, value)))
+  : chan == 3 ? (slider44 = value; click_note3 = max(0, min(127, value)));
+);
+
 function getClickVel(idx)
 (
   idx == 0 ? click_vel0 
@@ -276,36 +283,11 @@ function isHit(reltime, chan) local(i, hit, min_late, min_early, delta_early, de
 @slider
 beats = slider1;
 entry_mode = slider2;
+num_channels = slider5;
 
 error_bound = slider10/100;
 auto_shrink = slider11;
 event_style = slider12;
-
-select = slider3;
-
-select != prev_select ?
-  ( select == 0 ? (slider4 = slider20; slider8 = slider24)
-  : select == 1 ? (slider4 = slider30; slider8 = slider34)
-  : select == 2 ? (slider4 = slider40; slider8 = slider44)
-  : select == 3 ? (slider4 = slider50; slider8 = slider54))
-  
-: (
-  (slider4 != prev_slider4 ?
-    ( select == 0 ? slider20 = max(1, slider4)
-    : select == 1 ? slider30 = slider4
-    : select == 2 ? slider40 = slider4
-    : select == 3 ? slider50 = slider4));
-  (slider8 != prev_slider8 ?
-    ( select == 0 ? slider24 = slider8
-    : select == 1 ? slider34 = slider8
-    : select == 2 ? slider44 = slider8
-    : select == 3 ? slider54 = slider8));
-);
-
-prev_select = select;
-
-prev_slider4 = slider4;
-prev_slider8 = slider8;
 
 div0 = slider20;
 swing0 = slider21;
@@ -314,21 +296,21 @@ click0 = slider23;
 click_note0 = slider24;
 click_vel0 = slider25;
 
-div1 = slider30;
+div1 = slider30 * (num_channels > 1);
 swing1 = slider31;
 phase1 = slider32;
 click1 = slider33;
 click_note1 = slider34;
 click_vel1 = slider35;
 
-div2 = slider40;
+div2 = slider40 * (num_channels > 2);
 swing2 = slider41;
 phase2 = slider42;
 click2 = slider43;
 click_note2 = slider44;
 click_vel2 = slider45;
 
-div3 = slider50;
+div3 = slider50 * (num_channels > 3);
 swing3 = slider51;
 phase3 = slider52;
 click3 = slider53;
@@ -403,7 +385,6 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    channel = msg1 & 0x0F;
    
    play_state && noteStatus==note_on && msg3!=0 ? (
-     note_count += 1;
      note = msg2;
      reltime = getRelTime(offset);
      chan = channel % 4;
@@ -417,6 +398,13 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    );
   
    play_state ? recordTraining();
+   
+   noteStatus == note_on && msg3!=0 && listen_note_chan ? (
+     note = msg2;
+     setClickNote(listen_note_chan-1, note);
+     midisend(offset,msg1,msg2,msg3);
+     listen_note_chan = 0;
+   );
 );
 
 prev_play_state = play_state;
@@ -557,7 +545,6 @@ function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     sprintf(#value_edit, "Phase: %0.2f", getPhase(chan));
-    //printValueEdit(l+w/2, t+h/2, #value_edit);
   );
 );
 
@@ -579,7 +566,6 @@ function dragSwing(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     sprintf(#value_edit, "Swing: %0.2f", getSwing(chan));
-    //printValueEdit(l+w/2, t+h/2, str);
   );
 );
 
@@ -612,7 +598,7 @@ function drawButton(chan, id, l, t, w, h, str, state) local(focus, button_id, fo
   focus;
 );
 
-function drawToolBar(chan, l, t, w, h) local(release, f1, f2, f3, f4, f5, button_top)
+function drawToolBar(chan, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, button_top, str, click_note)
 (
   gfx_setfont(1, "Arial", 14);
   release = isLButtonRelease();
@@ -629,16 +615,25 @@ function drawToolBar(chan, l, t, w, h) local(release, f1, f2, f3, f4, f5, button
   button_top += w;
   f4 = drawButton(chan, control_vel_down, l+4, button_top, w-4, w-4, "v-", 0);
   button_top += w;
+  click_note = getClickNote(chan);
+  sprintf(str, "%.2s", noteName(click_note));
+  f6 = drawButton(chan, control_note, l+4, button_top, w-4, w-4, str, (listen_note_chan == chan+1));
+ 
   release && f1 ? setDivs(chan, getDivs(chan)+1); 
   release && f2 ? setDivs(chan, getDivs(chan)-1); 
   release && f3 ? setClickVel(chan, floor(getClickVel(chan)/4)*4+4); 
   release && f4 ? setClickVel(chan, floor(getClickVel(chan)/4)*4-4);
-  release && f5 ? setClick(chan, !getClick(chan)); 
+  release && f5 ? setClick(chan, !getClick(chan));
+  release && f6 ? listen_note_chan = (listen_note_chan == 1+chan)? 0 : 1+chan;
+  
   f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(chan));
   f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(chan));
   f1 || f2 && mouse_wheel_dir ? setDivs(chan, getDivs(chan)+mouse_wheel_dir);
   f3 || f4 && mouse_wheel_dir ? setClickVel(chan, getClickVel(chan)+mouse_wheel_dir);
   f5 ? sprintf(#value_edit, "Click: %s", getClick(chan) ? "On" : "Off");
+  (listen_note_chan == chan+1) ? sprintf(#value_edit, "Click Note: LISTENING", noteName(click_note), click_note) 
+  : f6 ? sprintf(#value_edit, "Click Note: %s (%d)", noteName(click_note), click_note);
+  f6 && mouse_wheel_dir ? (listen_note_chan = 0; setClickNote(chan, click_note+mouse_wheel_dir));
 );
 
 function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_control)
