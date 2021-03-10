@@ -150,7 +150,7 @@ function setSwing(chan, value)
   : chan == 1 ? (slider31 = value; slider_automate(slider31); swing1=value)
   : chan == 2 ? (slider41 = value; slider_automate(slider41); swing2=value)
   : (slider51 = value; slider_automate(slider51); swing3=value););
-  
+  resetPlay();
 );
 
 function getPhase(idx)
@@ -168,7 +168,8 @@ function setPhase(chan, value)
   : chan == 0 ? (slider22 = value; slider_automate(slider22); phase0=value)
   : chan == 1 ? (slider32 = value; slider_automate(slider32); phase1=value)
   : chan == 2 ? (slider42 = value; slider_automate(slider42); phase2=value)
-  : (slider52 = value; slider_automate(slider52); phase3=value)
+  : (slider52 = value; slider_automate(slider52); phase3=value);
+  resetPlay();
 );
 
 function getClick(idx)
@@ -185,6 +186,7 @@ function setClick(chan, value)
   : chan == 1 ? (slider33 = value; slider_automate(slider33); click1=max(0,min(1,value)))
   : chan == 2 ? (slider43 = value; slider_automate(slider43); click2=max(0,min(1,value)))
   : (slider53 = value; slider_automate(slider53); click3=max(0,min(1,value)));
+  resetPlay();
 );
 
 function getClickNote(idx)
@@ -589,35 +591,34 @@ function drawButton(chan, id, l, t, w, h, str, state) local(focus, button_id, fo
   press_brightness = 0.2 * focus * (mouse_cap & 1);
   delta = focus_brightness - press_brightness;
   rgb(delta, delta+state_brightness, delta+state_brightness);
+  gfx_a = 0.4;
   gfx_rect(l,t,w,h);
   rgb(0.5+delta, 0.5+delta, 0.5+delta);
   emptyRect(l,t,w,h);
-  rgb(1,1,1);
+  gfx_a = 1;  
   rgb(0.7+delta, 0.7+delta, 0.7+delta);
   printCenter(l+w/2, t+h/2, str);
   focus;
 );
 
-function drawToolBar(chan, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, button_top, str, click_note)
+function drawToolBar(chan, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, button_left, click_note)
 (
   gfx_setfont(1, "Arial", 14);
   release = isLButtonRelease();
   mouse_wheel_dir = mouse_wheel > 0 ? 1 : mouse_wheel < 0 ? -1 : 0;
-  button_top = t;
-  f1 = drawButton(chan, control_div_up, l+4, button_top, w-4, w-4, "+", 0);
-  button_top += w;
-  f2 = drawButton(chan, control_div_down, l+4, button_top, w-4, w-4, "-", 0);
-  button_top += w;
-  button_top += 4;
-  f5 = drawButton(chan, control_click, l+4, button_top, w-4, w-4, "c", getClick(chan));
-  button_top += w;
-  f3 = drawButton(chan, control_vel_up, l+4, button_top, w-4, w-4, "v+", 0);
-  button_top += w;
-  f4 = drawButton(chan, control_vel_down, l+4, button_top, w-4, w-4, "v-", 0);
-  button_top += w;
+  button_left = l+w-h;
+  f1 = drawButton(chan, control_div_up, button_left, t, h, h, "+", 0);
+  button_left -= h + 2;
+  f2 = drawButton(chan, control_div_down, button_left, t, h, h, "-", 0);
+  button_left -= h + 8;
+  f5 = drawButton(chan, control_click, button_left, t, h, h, "c", getClick(chan));
+  button_left -= h + 2;
+  f3 = drawButton(chan, control_vel_up, button_left, t, h, h, "v+", 0);
+  button_left -= h + 2;
+  f4 = drawButton(chan, control_vel_down, button_left, t, h, h,  "v-", 0);
+  button_left -= 1.5*h + 2;
   click_note = getClickNote(chan);
-  sprintf(str, "%.2s", noteName(click_note));
-  f6 = drawButton(chan, control_note, l+4, button_top, w-4, w-4, str, (listen_note_chan == chan+1));
+  f6 = drawButton(chan, control_note, button_left, t, h*1.5, h, noteName(click_note), (listen_note_chan == chan+1));
  
   release && f1 ? setDivs(chan, getDivs(chan)+1); 
   release && f2 ? setDivs(chan, getDivs(chan)-1); 
@@ -637,11 +638,7 @@ function drawToolBar(chan, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, bu
 );
 
 function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_control)
-(
-  toolbar_width = 20;
-  w -= toolbar_width;
-  drawToolBar(chan, l+w,t,toolbar_width,h);
-  
+(  
   focus_control = 0;
   
   rgb(0.27, 0.27, 0.27);
@@ -728,6 +725,8 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_
     gfx_line(x, t, x, t+h);
   );  
   
+  drawToolBar(chan, l+w-100,t+h-20,98,18);
+  
   rgb(1,0,0);
   gfx_setfont(1, "Arial", 48);
   isRecording() ? (printCenter(w/2, h/2, "RECORDING"));
@@ -737,6 +736,7 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, focus_
   dragSwing(chan,focus_control,divs, l, t, w, h);
   
   printValueEdit(l+w/2, t+h/2);
+
   
   drawFrame(l-1, t-1, w+2, h+2);
 );
