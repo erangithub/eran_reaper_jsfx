@@ -28,6 +28,7 @@ slider22:0<0,1,0.01>-Phase1
 slider23:0<0,1,1>-Click1
 slider24:60<0,127,1>-ClickNote1
 slider25:60<0,127,1>-ClickVel1
+slider26:-1<-2147483648,2147483647,1>-Mask1
 
 slider30:8<1,64,1>-Divisions2
 slider31:0<-0.5,0.5,0.01>-Swing2
@@ -35,6 +36,7 @@ slider32:0<0,1,0.01>-Phase2
 slider33:0<0,1,1>-Click2
 slider34:62<0,127,1>-ClickNote2
 slider35:60<0,127,1>-ClickVel2
+slider36:-1<-2147483648,2147483647,1>-Mask2
 
 slider40:8<1,64,1>-Divisions3
 slider41:0<-0.5,0.5,0.01>-Swing3
@@ -42,6 +44,7 @@ slider42:0<0,1,0.01>-Phase3
 slider43:0<0,1,1>-Click3
 slider44:64<0,127,1>-ClickNote3
 slider45:60<0,127,1>-ClickVel3
+slider46:-1<-2147483648,2147483647,1>-Mask3
 
 slider50:8<1,64,1>-Divisions4
 slider51:0<-0.5,0.5,0.01>-Swing4
@@ -49,6 +52,7 @@ slider52:0<0,1,0.01>-Phase4
 slider53:0<0,1,1>-Click4
 slider54:65<0,127,1>-ClickNote4
 slider55:60<0,127,1>-ClickVel4
+slider56:-1<-2147483648,2147483647,1>-Mask4
 
 @init
 note_on = $x90;
@@ -61,7 +65,6 @@ control_button_click = 5;
 control_button_vel_up = 6;
 control_button_vel_down = 7;
 control_button_note = 8;
-
 
 hist_idx = 0;
 max_hist = 200;
@@ -238,6 +241,24 @@ function getGrid(chan, divs, i) local(r)
   (i<0) ? r-1 : (i>=divs) ? r+floor(i/divs) : r;
 );
 
+function isGridEnabled(chan, idx) local(d,idx,mask)
+(
+  d = getDivs(chan);
+  idx = (idx + d) % d;
+  mask = (chan == 0 ? mask0 : chan == 1 ? mask1 : chan == 2 ? mask2 : mask3);
+  mask & (1<<idx);
+);
+
+function toggleGrid(chan, idx) local(d,idx)
+(
+  d = getDivs(chan);
+  idx = (idx + d) % d;
+  chan == 0 ? (mask0 = mask0 ~ (1<<idx); slider26 = mask0)
+  : chan == 1 ? (mask1 = mask1 ~ (1<<idx); slider36 = mask1)
+  : chan == 2 ? (mask2 = mask2 ~ (1<<idx); slider46 = mask2)
+  : chan == 3 ? (mask3 = mask3 ~ (1<<idx); slider56 = mask3)  
+);
+
 function getErrorRange()
 (
   (entry_mode == 1) ? error_bound/max_recorded_divs : error_bound/max_divs;
@@ -253,12 +274,12 @@ function getLate(chan, divs, i)
   min(1, getGrid(chan, divs, i) + getErrorRange()/2);
 );
 
-function adjust_error_bound(hit_rate) local(level)
+function adjustErrorBound(hit_rate) local(level)
 (
   (hit_rate > 0.9) ? 
     (level = (error_bound < 0.2 ? 0.001 : error_bound <= 0.3 ? 0.002 : error_bound <= 0.4 ?  0.005 : 0.01);
     (error_bound = max(0, error_bound - level)));
-  slider7 = error_bound*100;
+  slider10 = error_bound*100;
 );
 
 // returns: 0 == hit, -1 == early, 1 == late
@@ -272,7 +293,7 @@ function isHit(reltime, chan) local(i, hit, min_late, min_early, delta_early, de
   while(
     delta_early = getEarly(chan, divs, i) - reltime;
     delta_late = reltime - getLate(chan, divs, i);
-    hit |= (delta_early <= 0) && (delta_late <= 0);
+    hit |= isGridEnabled(chan, i) && (delta_early <= 0) && (delta_late <= 0);
     delta_early > 0 ? (min_early = min(min_early, delta_early));
     delta_late > 0 ? (min_late = min(min_late, delta_late));
     i += 1;
@@ -297,6 +318,7 @@ phase0 = slider22;
 click0 = slider23;
 click_note0 = slider24;
 click_vel0 = slider25;
+mask0 = slider26;
 
 div1 = slider30 * (num_channels > 1);
 swing1 = slider31;
@@ -304,6 +326,7 @@ phase1 = slider32;
 click1 = slider33;
 click_note1 = slider34;
 click_vel1 = slider35;
+mask1 = slider36;
 
 div2 = slider40 * (num_channels > 2);
 swing2 = slider41;
@@ -311,6 +334,7 @@ phase2 = slider42;
 click2 = slider43;
 click_note2 = slider44;
 click_vel2 = slider45;
+mask2 = slider36;
 
 div3 = slider50 * (num_channels > 3);
 swing3 = slider51;
@@ -318,6 +342,7 @@ phase3 = slider52;
 click3 = slider53;
 click_note3 = slider54;
 click_vel3 = slider55;
+mask3 = slider36;
 
 max_divs = max(div0, max(div1, max(div2, div3)));
 
@@ -325,7 +350,7 @@ resetPlay();
 
 @block
 
-function playGrid(chan, reset) local(sp_per_beat, sp_now, divs, sp_grid)
+function playGrid(chan) local(sp_per_beat, sp_now, divs, sp_grid)
 (
   (v_play_off_timers[chan] < samplesblock) ? (
     midisend(max(0, v_play_off_timers[chan]), $x90, getClickNote(chan), 0);
@@ -334,7 +359,8 @@ function playGrid(chan, reset) local(sp_per_beat, sp_now, divs, sp_grid)
   
   // find next "grid line" such that timer will be >= sampleblock
   (v_play_timers[chan] < samplesblock) ? (
-    (v_play_timers[chan] >= 0 ? midisend(max(0, v_play_timers[chan]), $x90, getClickNote(chan), getClickVel(chan)));
+    isGridEnabled(chan, v_play_indices[chan]) && v_play_timers[chan] >= 0 ? 
+      midisend(max(0, v_play_timers[chan]), $x90, getClickNote(chan), getClickVel(chan));
     sp_per_beat = srate * 60 / tempo;
     sp_now = floor(0.001 + beat_position * sp_per_beat);
     divs = getDivs(chan);
@@ -362,7 +388,7 @@ function recordHistory(reltime, hit, chan, note)
   events_count = events_count * hit_memory + 1;
   hits_count = hits_count * hit_memory + (hit==0);
   hit_rate = hits_count/events_count;
-  (auto_shrink) ? (adjust_error_bound(hit_rate));
+  (auto_shrink) ? (adjustErrorBound(hit_rate));
   hist_idx = (hist_idx + 1) % max_hist;
 );
 
@@ -376,10 +402,10 @@ function recordTraining() local(t)
 );
 
 play_state ? (
-  getClick(0) ? playGrid(0, 0);
-  getClick(1) && div1 ? playGrid(1, 1);
-  getClick(2) && div2 ? playGrid(2, 1);
-  getClick(3) && div3 ? playGrid(3, 1);
+  getClick(0) ? playGrid(0);
+  getClick(1) && div1 ? playGrid(1);
+  getClick(2) && div2 ? playGrid(2);
+  getClick(3) && div3 ? playGrid(3);
 );
 
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
@@ -417,6 +443,11 @@ prev_play_state = play_state;
 function isLButtonRelease()
 (
   (1 ~ mouse_cap) & prev_mouse_cap & 1;
+);
+
+function isRButtonRelease()
+(
+  (2 ~ mouse_cap) & prev_mouse_cap & 2;
 );
 
 function rgb(r,g,b) 
@@ -460,10 +491,10 @@ function printValueEdit(x,y) local(w,h, margin)
 (
   (strlen(#value_edit) > 0) ? 
   (
-    rgb(1,1,1);
+    rgb(0,0,0);
     gfx_setfont(1, "Arial", 24);
     gfx_measurestr(#value_edit,w,h);
-    gfx_a=0.16;
+    gfx_a=0.6;
     margin=4;
     gfx_rect(x-w/2-margin, y-h/2-margin, w+margin*2, h+margin*2);
     gfx_a=1;
@@ -526,7 +557,7 @@ function isMouseInRect(l,t,w,h)
 
 function controlId(chan, control)
 (
-  (chan + 1)*100 + control;
+  (chan + 1)*1000 + control;
 );
 
 function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
@@ -539,7 +570,7 @@ function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
       dx = floor(dx*resolution + 0.5) / resolution;
       setPhase(chan, max(0, min(1, dx)));
     ) 
-  : active_control == 0 && focus_control == ctrl_id ? (
+  : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
       orig_value = getPhase(chan);
       orig_x = mouse_x;
@@ -560,7 +591,7 @@ function dragSwing(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
       dx = floor(dx*resolution + 0.5) / resolution;
       setSwing(chan, max(-0.5, min(0.5, dx)));
     ) 
-  : active_control == 0 && focus_control == ctrl_id ? (
+  : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
       orig_value = getSwing(chan);
       orig_x = mouse_x;
@@ -642,7 +673,7 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
 (  
   focus_control = 0;
   toolbar_height = 20;
-  
+ 
   rgb(0.27, 0.27, 0.27);
   gfx_rect(l, t, isRecording() ? w * getRelTime() : w, h);
 
@@ -654,9 +685,11 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
     rgb(0, 0.4, 0);
     i=-1;
     loop(divs+2,
-      low = l+getEarly(chan, divs, i)*w;
-      high = l+getLate(chan, divs, i)*w+1;
-      gfx_rect(low, t, high-low, h);
+      isGridEnabled(chan, i) ? (
+        low = l+getEarly(chan, divs, i)*w;
+        high = l+getLate(chan, divs, i)*w+1;
+        gfx_rect(low, t, high-low, h);
+      );
       i+=1;
     );
   );
@@ -667,21 +700,25 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   ctrl_swing_id = controlId(chan, control_swing);
   loop(divs, 
     grid = l+getGrid(chan, divs, i)*w;
-    ((i+1)%2) && ((!active_control && isMouseInRect(grid-8, t, 16, h - toolbar_height)) || (active_control == ctrl_phase_id)) ? (
+    mouse_focus = isMouseInRect(grid-8, t, 16, h - toolbar_height);
+    ((i+1)%2) && ((!active_control && mouse_focus) || (active_control == ctrl_phase_id)) ? (
       focus_control = ctrl_phase_id;
       rgb(0,0.5,0.5);
       gfx_rect(grid-6, t, 12, h);
     );
-    (i%2) && ((!active_control && isMouseInRect(grid-8, t, 16, h - toolbar_height)) || (active_control == ctrl_swing_id)) ? (
+    (i%2) && ((!active_control && mouse_focus) || (active_control == ctrl_swing_id)) ? (
       focus_control = ctrl_swing_id;
       rgb(0.5,0,1);
       gfx_rect(grid-6, t, 12, h);
     );
     rgb(0.67, 0.67, 0.67);
     verticalDashedLine(grid, t, t+h, 1, 5);
-    sprintf(str, "%d", i+1);
-    gfx_setfont(1, "Arial", 12);
+    isGridEnabled(chan, i) ? 
+      (sprintf(str, "%d", i+1); rgb(1,1,1)) 
+    : (sprintf(str, "(%d)", i+1); rgb(0.5, 0.5, 0.5));
+    gfx_setfont(1, "Arial", 16);
     printCenter(grid,t+h/2,str);
+    mouse_focus && isRButtonRelease() ? toggleGrid(chan, i);
     i+=1;
   );
     
