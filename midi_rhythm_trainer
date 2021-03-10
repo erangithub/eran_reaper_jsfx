@@ -16,12 +16,12 @@ desc: MIDI Rhythm Trainer
     
 slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
-slider5:1<1,4,1>Number of Channels
+slider5:1<1,4,1>Number of Lanes
 slider10:50<1,100,0.1>Error Bound (%)
 slider11:1<0,1,1{Off,On}>Auto Shrink Error Bound
 slider12:0<0,4,1{Circles,Note Names,Note Numbers}>Event Drawing Style
 
-// Hidden sliders per channel
+// Hidden sliders per lane
 slider20:8<1,64,1>-Divisions1
 slider21:0<-0.5,0.5,0.01>-Swing1
 slider22:0<0,1,0.01>-Phase1
@@ -81,8 +81,8 @@ prev_select = -1;
 v_history_time = 4; 
 v_history_rel_time = v_history_time + max_hist;
 v_history_hits = v_history_rel_time + max_hist;
-v_history_chan = v_history_hits + max_hist;
-v_history_notes = v_history_chan + max_hist;
+v_history_lane = v_history_hits + max_hist;
+v_history_notes = v_history_lane + max_hist;
 v_play_indices = v_history_notes + max_hist;
 v_play_timers = v_play_indices + 4;
 v_play_off_timers = v_play_timers + 4;
@@ -110,153 +110,157 @@ function getRelTime(offset) local(p)
   p - floor(p);
 );
 
-function recordRecording(reltime, chan) local(i)
+function recordRecording(reltime, lane) local(i)
 (
-  v_rec[chan*max_hist + v_rec_indices[chan]] = reltime;
-  v_rec_indices[chan] += 1;
-  max_recorded_divs = max(max_recorded_divs, v_rec_indices[chan]);
+  v_rec[lane*max_hist + v_rec_indices[lane]] = reltime;
+  v_rec_indices[lane] += 1;
+  max_recorded_divs = max(max_recorded_divs, v_rec_indices[lane]);
 );
 
-function getDivs(idx)
+// Getters and Setters
+
+function getDivs(lane)
 ( 
-  (entry_mode == 1) ? v_rec_indices[idx]
-  : idx == 0 ? div0 
-  : idx == 1 ? div1 
-  : idx == 2 ? div2
+  (entry_mode == 1) ? v_rec_indices[lane]
+  : lane == 0 ? div0 
+  : lane == 1 ? div1 
+  : lane == 2 ? div2
   : div3;
 );
 
-function setDivs(chan, value)
+function setDivs(lane, value)
 (
   (entry_mode == 1) ? 0
-  : chan == 0 ? (slider20 = value; slider_automate(slider20); div0=max(1,min(64,value)))
-  : chan == 1 ? (slider30 = value; slider_automate(slider30); div1=max(1,min(64,value)))
-  : chan == 2 ? (slider40 = value; slider_automate(slider40); div2=max(1,min(64,value)))
+  : lane == 0 ? (slider20 = value; slider_automate(slider20); div0=max(1,min(64,value)))
+  : lane == 1 ? (slider30 = value; slider_automate(slider30); div1=max(1,min(64,value)))
+  : lane == 2 ? (slider40 = value; slider_automate(slider40); div2=max(1,min(64,value)))
   : (slider50 = value; slider_automate(slider50); div3=max(1,min(64,value)));
   max_divs = max(div0, max(div1, max(div2, div3)));
   resetPlay();
 );
 
-function getSwing(idx)
+function getSwing(lane)
 ( 
   (entry_mode == 1) ? 0
-  : idx == 0 ? swing0 
-  : idx == 1 ? swing1 
-  : idx == 2 ? swing2
+  : lane == 0 ? swing0 
+  : lane == 1 ? swing1 
+  : lane == 2 ? swing2
   : swing3;
 );
 
-function setSwing(chan, value)
+function setSwing(lane, value)
 (
   ((entry_mode == 1) ? 0
-  : chan == 0 ? (slider21 = value; slider_automate(slider21); swing0=value)
-  : chan == 1 ? (slider31 = value; slider_automate(slider31); swing1=value)
-  : chan == 2 ? (slider41 = value; slider_automate(slider41); swing2=value)
+  : lane == 0 ? (slider21 = value; slider_automate(slider21); swing0=value)
+  : lane == 1 ? (slider31 = value; slider_automate(slider31); swing1=value)
+  : lane == 2 ? (slider41 = value; slider_automate(slider41); swing2=value)
   : (slider51 = value; slider_automate(slider51); swing3=value););
   resetPlay();
 );
 
-function getPhase(idx)
+function getPhase(lane)
 ( 
   (entry_mode == 1) ? 0
-  : idx == 0 ? phase0 
-  : idx == 1 ? phase1 
-  : idx == 2 ? phase2
+  : lane == 0 ? phase0 
+  : lane == 1 ? phase1 
+  : lane == 2 ? phase2
   : phase3;
 );
 
-function setPhase(chan, value)
+function setPhase(lane, value)
 (
   (entry_mode == 1) ? 0
-  : chan == 0 ? (slider22 = value; slider_automate(slider22); phase0=value)
-  : chan == 1 ? (slider32 = value; slider_automate(slider32); phase1=value)
-  : chan == 2 ? (slider42 = value; slider_automate(slider42); phase2=value)
+  : lane == 0 ? (slider22 = value; slider_automate(slider22); phase0=value)
+  : lane == 1 ? (slider32 = value; slider_automate(slider32); phase1=value)
+  : lane == 2 ? (slider42 = value; slider_automate(slider42); phase2=value)
   : (slider52 = value; slider_automate(slider52); phase3=value);
   resetPlay();
 );
 
-function getClick(idx)
+function getClick(lane)
 (
-  idx == 0 ? click0 
-  : idx == 1 ? click1 
-  : idx == 2 ? click2
+  lane == 0 ? click0 
+  : lane == 1 ? click1 
+  : lane == 2 ? click2
   : click3;
 );
 
-function setClick(chan, value)
+function setClick(lane, value)
 (
-  chan == 0 ? (slider23 = value; slider_automate(slider23); click0=max(0,min(1,value)))
-  : chan == 1 ? (slider33 = value; slider_automate(slider33); click1=max(0,min(1,value)))
-  : chan == 2 ? (slider43 = value; slider_automate(slider43); click2=max(0,min(1,value)))
+  lane == 0 ? (slider23 = value; slider_automate(slider23); click0=max(0,min(1,value)))
+  : lane == 1 ? (slider33 = value; slider_automate(slider33); click1=max(0,min(1,value)))
+  : lane == 2 ? (slider43 = value; slider_automate(slider43); click2=max(0,min(1,value)))
   : (slider53 = value; slider_automate(slider53); click3=max(0,min(1,value)));
   resetPlay();
 );
 
-function getClickNote(idx)
+function getClickNote(lane)
 (
-  idx == 0 ? click_note0 
-  : idx == 1 ? click_note1 
-  : idx == 2 ? click_note2
+  lane == 0 ? click_note0 
+  : lane == 1 ? click_note1 
+  : lane == 2 ? click_note2
   : click_note3;
 );
 
-function setClickNote(chan, value)
+function setClickNote(lane, value)
 (
-  chan == 0 ? (slider24 = value; click_note0 = max(0, min(127, value)))
-  : chan == 1 ? (slider34 = value; click_note1 = max(0, min(127, value)))
-  : chan == 2 ? (slider44 = value; click_note2 = max(0, min(127, value)))
-  : chan == 3 ? (slider44 = value; click_note3 = max(0, min(127, value)));
+  lane == 0 ? (slider24 = value; click_note0 = max(0, min(127, value)))
+  : lane == 1 ? (slider34 = value; click_note1 = max(0, min(127, value)))
+  : lane == 2 ? (slider44 = value; click_note2 = max(0, min(127, value)))
+  : lane == 3 ? (slider44 = value; click_note3 = max(0, min(127, value)));
 );
 
-function getClickVel(idx)
+function getClickVel(lane)
 (
-  idx == 0 ? click_vel0 
-  : idx == 1 ? click_vel1 
-  : idx == 2 ? click_vel2
+  lane == 0 ? click_vel0 
+  : lane == 1 ? click_vel1 
+  : lane == 2 ? click_vel2
   : click_note3;
 );
 
-function setClickVel(chan, value)
+function setClickVel(lane, value)
 (
-  chan == 0 ? (slider25 = value; click_vel0 = max(0, min(127, value)))
-  : chan == 1 ? (slider35 = value; click_vel1 = max(0, min(127, value)))
-  : chan == 2 ? (slider45 = value; click_vel2 = max(0, min(127, value)))
-  : chan == 3 ? (slider45 = value; click_vel3 = max(0, min(127, value)));
+  lane == 0 ? (slider25 = value; click_vel0 = max(0, min(127, value)))
+  : lane == 1 ? (slider35 = value; click_vel1 = max(0, min(127, value)))
+  : lane == 2 ? (slider45 = value; click_vel2 = max(0, min(127, value)))
+  : lane == 3 ? (slider45 = value; click_vel3 = max(0, min(127, value)));
 );
+
+function isGridEnabled(lane, idx) local(d,idx,mask)
+(
+  d = getDivs(lane);
+  idx = (idx + d) % d;
+  mask = (lane == 0 ? mask0 : lane == 1 ? mask1 : lane == 2 ? mask2 : mask3);
+  mask & (1<<idx);
+);
+
+function toggleGrid(lane, idx) local(d,idx)
+(
+  d = getDivs(lane);
+  idx = (idx + d) % d;
+  lane == 0 ? (mask0 = mask0 ~ (1<<idx); slider26 = mask0)
+  : lane == 1 ? (mask1 = mask1 ~ (1<<idx); slider36 = mask1)
+  : lane == 2 ? (mask2 = mask2 ~ (1<<idx); slider46 = mask2)
+  : lane == 3 ? (mask3 = mask3 ~ (1<<idx); slider56 = mask3)  
+);
+
+//
 
 function isRecording()
 (
   play_state && enable_recording && (entry_mode == 1) && ((beat_position) < beats)
 );
 
-function getGridRaw(chan, divs, i)
+function getGridRaw(lane, divs, i)
 (
-  (entry_mode == 1) ? v_rec[max_hist*chan + i]
-  : (i + (i&1 ? getSwing(chan)) + getPhase(chan))/divs;
+  (entry_mode == 1) ? v_rec[max_hist*lane + i]
+  : (i + (i&1 ? getSwing(lane)) + getPhase(lane))/divs;
 );
 
-function getGrid(chan, divs, i) local(r)
+function getGrid(lane, divs, i) local(r)
 (
-  r = getGridRaw(chan, divs, (i+divs)%divs);
+  r = getGridRaw(lane, divs, (i+divs)%divs);
   (i<0) ? r-1 : (i>=divs) ? r+floor(i/divs) : r;
-);
-
-function isGridEnabled(chan, idx) local(d,idx,mask)
-(
-  d = getDivs(chan);
-  idx = (idx + d) % d;
-  mask = (chan == 0 ? mask0 : chan == 1 ? mask1 : chan == 2 ? mask2 : mask3);
-  mask & (1<<idx);
-);
-
-function toggleGrid(chan, idx) local(d,idx)
-(
-  d = getDivs(chan);
-  idx = (idx + d) % d;
-  chan == 0 ? (mask0 = mask0 ~ (1<<idx); slider26 = mask0)
-  : chan == 1 ? (mask1 = mask1 ~ (1<<idx); slider36 = mask1)
-  : chan == 2 ? (mask2 = mask2 ~ (1<<idx); slider46 = mask2)
-  : chan == 3 ? (mask3 = mask3 ~ (1<<idx); slider56 = mask3)  
 );
 
 function getErrorRange()
@@ -264,14 +268,14 @@ function getErrorRange()
   (entry_mode == 1) ? error_bound/max_recorded_divs : error_bound/max_divs;
 );
 
-function getEarly(chan, divs, i)
+function getEarly(lane, divs, i)
 (
-  max(0, getGrid(chan, divs, i) - getErrorRange()/2);
+  max(0, getGrid(lane, divs, i) - getErrorRange()/2);
 );
 
-function getLate(chan, divs, i)
+function getLate(lane, divs, i)
 (
-  min(1, getGrid(chan, divs, i) + getErrorRange()/2);
+  min(1, getGrid(lane, divs, i) + getErrorRange()/2);
 );
 
 function adjustErrorBound(hit_rate) local(level)
@@ -283,17 +287,17 @@ function adjustErrorBound(hit_rate) local(level)
 );
 
 // returns: 0 == hit, -1 == early, 1 == late
-function isHit(reltime, chan) local(i, hit, min_late, min_early, delta_early, delta_late, divs)
+function isHit(reltime, lane) local(i, hit, min_late, min_early, delta_early, delta_late, divs)
 (
   i=0;
   hit = 0;
   min_late = 1;
   min_early = 1;
-  divs = getDivs(chan);
+  divs = getDivs(lane);
   while(
-    delta_early = getEarly(chan, divs, i) - reltime;
-    delta_late = reltime - getLate(chan, divs, i);
-    hit |= isGridEnabled(chan, i) && (delta_early <= 0) && (delta_late <= 0);
+    delta_early = getEarly(lane, divs, i) - reltime;
+    delta_late = reltime - getLate(lane, divs, i);
+    hit |= isGridEnabled(lane, i) && (delta_early <= 0) && (delta_late <= 0);
     delta_early > 0 ? (min_early = min(min_early, delta_early));
     delta_late > 0 ? (min_late = min(min_late, delta_late));
     i += 1;
@@ -306,7 +310,7 @@ function isHit(reltime, chan) local(i, hit, min_late, min_early, delta_early, de
 @slider
 beats = slider1;
 entry_mode = slider2;
-num_channels = slider5;
+num_lanenels = slider5;
 
 error_bound = slider10/100;
 auto_shrink = slider11;
@@ -320,7 +324,7 @@ click_note0 = slider24;
 click_vel0 = slider25;
 mask0 = slider26;
 
-div1 = slider30 * (num_channels > 1);
+div1 = slider30 * (num_lanenels > 1);
 swing1 = slider31;
 phase1 = slider32;
 click1 = slider33;
@@ -328,7 +332,7 @@ click_note1 = slider34;
 click_vel1 = slider35;
 mask1 = slider36;
 
-div2 = slider40 * (num_channels > 2);
+div2 = slider40 * (num_lanenels > 2);
 swing2 = slider41;
 phase2 = slider42;
 click2 = slider43;
@@ -336,7 +340,7 @@ click_note2 = slider44;
 click_vel2 = slider45;
 mask2 = slider36;
 
-div3 = slider50 * (num_channels > 3);
+div3 = slider50 * (num_lanenels > 3);
 swing3 = slider51;
 phase3 = slider52;
 click3 = slider53;
@@ -350,40 +354,40 @@ resetPlay();
 
 @block
 
-function playGrid(chan) local(sp_per_beat, sp_now, divs, sp_grid)
+function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid)
 (
-  (v_play_off_timers[chan] < samplesblock) ? (
-    midisend(max(0, v_play_off_timers[chan]), $x90, getClickNote(chan), 0);
-    v_play_off_timers[chan] = 1000000;
+  (v_play_off_timers[lane] < samplesblock) ? (
+    midisend(max(0, v_play_off_timers[lane]), $x90, getClickNote(lane), 0);
+    v_play_off_timers[lane] = 1000000;
   );
   
   // find next "grid line" such that timer will be >= sampleblock
-  (v_play_timers[chan] < samplesblock) ? (
-    isGridEnabled(chan, v_play_indices[chan]) && v_play_timers[chan] >= 0 ? 
-      midisend(max(0, v_play_timers[chan]), $x90, getClickNote(chan), getClickVel(chan));
+  (v_play_timers[lane] < samplesblock) ? (
+    isGridEnabled(lane, v_play_indices[lane]) && v_play_timers[lane] >= 0 ? 
+      midisend(max(0, v_play_timers[lane]), $x90, getClickNote(lane), getClickVel(lane));
     sp_per_beat = srate * 60 / tempo;
     sp_now = floor(0.001 + beat_position * sp_per_beat);
-    divs = getDivs(chan);
-    while (v_play_timers[chan] < samplesblock) (
-      v_play_indices[chan] += 1;
-      sp_grid = floor(0.001 + 1 * getGrid(chan, divs, v_play_indices[chan]) * sp_per_beat * beats);
-      v_play_timers[chan] = sp_grid - sp_now;
+    divs = getDivs(lane);
+    while (v_play_timers[lane] < samplesblock) (
+      v_play_indices[lane] += 1;
+      sp_grid = floor(0.001 + 1 * getGrid(lane, divs, v_play_indices[lane]) * sp_per_beat * beats);
+      v_play_timers[lane] = sp_grid - sp_now;
     );
-    v_play_off_timers[chan] = timer0 * 0.1;
+    v_play_off_timers[lane] = timer0 * 0.1;
   );
   
-  v_play_timers[chan] -= samplesblock;
-  v_play_off_timers[chan] -= samplesblock;
+  v_play_timers[lane] -= samplesblock;
+  v_play_off_timers[lane] -= samplesblock;
 );
 
-function recordHistory(reltime, hit, chan, note)
+function recordHistory(reltime, hit, lane, note)
 (
   enable_recording = 0;
   rec_idx = 0;
   v_history_time[hist_idx] = time_precise();
   v_history_rel_time[hist_idx] = reltime;
   v_history_hits[hist_idx] = hit;
-  v_history_chan[hist_idx] = chan;
+  v_history_lane[hist_idx] = lane;
   v_history_notes[hist_idx] = note;
   events_count = events_count * hit_memory + 1;
   hits_count = hits_count * hit_memory + (hit==0);
@@ -415,11 +419,11 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    play_state && noteStatus==note_on && msg3!=0 ? (
      note = msg2;
      reltime = getRelTime(offset);
-     chan = channel % 4;
-     hit = isHit(reltime, chan);
+     lane = channel % 4;
+     hit = isHit(reltime, lane);
      isrec = isRecording();
      (isrec || (hit == 0)) ? (midisend(offset,msg1,note,msg3));
-     isrec ? recordRecording(reltime, chan) : recordHistory(reltime, hit, chan, note);
+     isrec ? recordRecording(reltime, lane) : recordHistory(reltime, hit, lane, note);
    ) : (
      enable_recording = 1;
      midisend(offset,msg1,msg2,msg3); // passthrough other events
@@ -427,11 +431,11 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
   
    play_state ? recordTraining();
    
-   noteStatus == note_on && msg3!=0 && listen_note_chan ? (
+   noteStatus == note_on && msg3!=0 && listen_note_lane ? (
      note = msg2;
-     setClickNote(listen_note_chan-1, note);
+     setClickNote(listen_note_lane-1, note);
      midisend(offset,msg1,msg2,msg3);
-     listen_note_chan = 0;
+     listen_note_lane = 0;
    );
 );
 
@@ -555,50 +559,50 @@ function isMouseInRect(l,t,w,h)
   mouse_x >= l && mouse_x <= l+w && mouse_y >= t && mouse_y <= t+h;
 );
 
-function controlId(chan, control)
+function controlId(lane, control)
 (
-  (chan + 1)*1000 + control;
+  (lane + 1)*1000 + control;
 );
 
-function dragPhase(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
+function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
 (
-  ctrl_id = controlId(chan, control_phase);
+  ctrl_id = controlId(lane, control_phase);
   
   active_control == ctrl_id ? (
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
-      setPhase(chan, max(0, min(1, dx)));
+      setPhase(lane, max(0, min(1, dx)));
     ) 
   : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
-      orig_value = getPhase(chan);
+      orig_value = getPhase(lane);
       orig_x = mouse_x;
   );
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
-    sprintf(#value_edit, "Phase: %0.2f", getPhase(chan));
+    sprintf(#value_edit, "Phase: %0.2f", getPhase(lane));
   );
 );
 
-function dragSwing(chan,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
+function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
 (
-  ctrl_id = controlId(chan, control_swing);
+  ctrl_id = controlId(lane, control_swing);
   
   active_control == ctrl_id ? (
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
-      setSwing(chan, max(-0.5, min(0.5, dx)));
+      setSwing(lane, max(-0.5, min(0.5, dx)));
     ) 
   : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
-      orig_value = getSwing(chan);
+      orig_value = getSwing(lane);
       orig_x = mouse_x;
   );
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
-    sprintf(#value_edit, "Swing: %0.2f", getSwing(chan));
+    sprintf(#value_edit, "Swing: %0.2f", getSwing(lane));
   );
 );
 
@@ -612,9 +616,9 @@ function emptyRect(l,t,w,h)
   gfx_lineto(l,t);
 );
 
-function drawButton(chan, id, l, t, w, h, str, state) local(focus, button_id, focus_brightness, state_brightness, press_brighness, delta)
+function drawButton(lane, id, l, t, w, h, str, state) local(focus, button_id, focus_brightness, state_brightness, press_brighness, delta)
 (
-  button_id = controlId(chan, id);
+  button_id = controlId(lane, id);
   !active_control && isMouseInRect(l,t,w,h) && mouse_cap & 1 ? active_control = button_id;
   focus = (!active_control || active_control == button_id) && isMouseInRect(l,t,w,h);
   focus_brightness = 0.1 * focus;
@@ -632,50 +636,50 @@ function drawButton(chan, id, l, t, w, h, str, state) local(focus, button_id, fo
   focus;
 );
 
-function drawToolBar(chan, r, b, h) local(release, f1, f2, f3, f4, f5, f6, button_left, button_top, click_note)
+function drawToolBar(lane, r, b, h) local(release, f1, f2, f3, f4, f5, f6, button_left, button_top, click_note)
 (
   gfx_setfont(1, "Arial", 14);
   release = isLButtonRelease();
   mouse_wheel_dir = mouse_wheel > 0 ? 1 : mouse_wheel < 0 ? -1 : 0;
   button_left = r-h;
   button_top = b-h;
-  f0 = drawButton(chan, control_div_up, button_left, button_top, h, h, expand_toolbar ? ">>" : "<<", 0);
+  f0 = drawButton(lane, control_div_up, button_left, button_top, h, h, expand_toolbar ? ">>" : "<<", 0);
   release && f0 ? expand_toolbar = !expand_toolbar;
   
   expand_toolbar ? (
     button_left -= h + 2;
-    f1 = drawButton(chan, control_div_up, button_left, button_top, h, h, "+", 0);
+    f1 = drawButton(lane, control_div_up, button_left, button_top, h, h, "+", 0);
     button_left -= h + 2;
-    f2 = drawButton(chan, control_div_down, button_left, button_top, h, h, "-", 0);
+    f2 = drawButton(lane, control_div_down, button_left, button_top, h, h, "-", 0);
     button_left -= h*1.5 + 8;
-    f5 = drawButton(chan, control_click, button_left, button_top, h*1.5, h, "click", getClick(chan));
+    f5 = drawButton(lane, control_click, button_left, button_top, h*1.5, h, "click", getClick(lane));
     button_left -= h + 2;
-    f3 = drawButton(chan, control_vel_up, button_left, button_top, h, h, "v+", 0);
+    f3 = drawButton(lane, control_vel_up, button_left, button_top, h, h, "v+", 0);
     button_left -= h + 2;
-    f4 = drawButton(chan, control_vel_down, button_left, button_top, h, h,  "v-", 0);
+    f4 = drawButton(lane, control_vel_down, button_left, button_top, h, h,  "v-", 0);
     button_left -= 1.5*h + 2;
-    click_note = getClickNote(chan);
-    f6 = drawButton(chan, control_note, button_left, button_top, h*1.5, h, noteName(click_note), (listen_note_chan == chan+1));
+    click_note = getClickNote(lane);
+    f6 = drawButton(lane, control_note, button_left, button_top, h*1.5, h, noteName(click_note), (listen_note_lane == lane+1));
    
-    release && f1 ? setDivs(chan, getDivs(chan)+1); 
-    release && f2 ? setDivs(chan, getDivs(chan)-1); 
-    release && f3 ? setClickVel(chan, floor(getClickVel(chan)/4)*4+4); 
-    release && f4 ? setClickVel(chan, floor(getClickVel(chan)/4)*4-4);
-    release && f5 ? setClick(chan, !getClick(chan));
-    release && f6 ? listen_note_chan = (listen_note_chan == 1+chan)? 0 : 1+chan;
+    release && f1 ? setDivs(lane, getDivs(lane)+1); 
+    release && f2 ? setDivs(lane, getDivs(lane)-1); 
+    release && f3 ? setClickVel(lane, floor(getClickVel(lane)/4)*4+4); 
+    release && f4 ? setClickVel(lane, floor(getClickVel(lane)/4)*4-4);
+    release && f5 ? setClick(lane, !getClick(lane));
+    release && f6 ? listen_note_lane = (listen_note_lane == 1+lane)? 0 : 1+lane;
     
-    f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(chan));
-    f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(chan));
-    f1 || f2 && mouse_wheel_dir ? setDivs(chan, getDivs(chan)+mouse_wheel_dir);
-    f3 || f4 && mouse_wheel_dir ? setClickVel(chan, getClickVel(chan)+mouse_wheel_dir);
-    f5 ? sprintf(#value_edit, "Click: %s", getClick(chan) ? "On" : "Off");
-    (listen_note_chan == chan+1) ? sprintf(#value_edit, "Click Note: LISTENING", noteName(click_note), click_note) 
+    f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(lane));
+    f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(lane));
+    f1 || f2 && mouse_wheel_dir ? setDivs(lane, getDivs(lane)+mouse_wheel_dir);
+    f3 || f4 && mouse_wheel_dir ? setClickVel(lane, getClickVel(lane)+mouse_wheel_dir);
+    f5 ? sprintf(#value_edit, "Click: %s", getClick(lane) ? "On" : "Off");
+    (listen_note_lane == lane+1) ? sprintf(#value_edit, "Click Note: LISTENING", noteName(click_note), click_note) 
     : f6 ? sprintf(#value_edit, "Click Note: %s (%d)", noteName(click_note), click_note);
-    f6 && mouse_wheel_dir ? (listen_note_chan = 0; setClickNote(chan, click_note+mouse_wheel_dir));
+    f6 && mouse_wheel_dir ? (listen_note_lane = 0; setClickNote(lane, click_note+mouse_wheel_dir));
   )
 );
 
-function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
+function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
 (  
   focus_control = 0;
   toolbar_height = 20;
@@ -684,16 +688,16 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   gfx_rect(l, t, isRecording() ? w * getRelTime() : w, h);
 
   // Draw "grid" area
-  divs = getDivs(chan);
+  divs = getDivs(lane);
     
   !isRecording() ? (
     // Draw green areas
     rgb(0, 0.4, 0);
     i=-1;
     loop(divs+2,
-      isGridEnabled(chan, i) ? (
-        low = l+getEarly(chan, divs, i)*w;
-        high = l+getLate(chan, divs, i)*w+1;
+      isGridEnabled(lane, i) ? (
+        low = l+getEarly(lane, divs, i)*w;
+        high = l+getLate(lane, divs, i)*w+1;
         gfx_rect(low, t, high-low, h);
       );
       i+=1;
@@ -702,10 +706,10 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   
   // Draw dashed rhythm lines
   i=0;
-  ctrl_phase_id = controlId(chan, control_phase);
-  ctrl_swing_id = controlId(chan, control_swing);
+  ctrl_phase_id = controlId(lane, control_phase);
+  ctrl_swing_id = controlId(lane, control_swing);
   loop(divs, 
-    grid = l+getGrid(chan, divs, i)*w;
+    grid = l+getGrid(lane, divs, i)*w;
     mouse_focus = isMouseInRect(grid-8, t, 16, h - toolbar_height);
     ((i+1)%2) && ((!active_control && mouse_focus) || (active_control == ctrl_phase_id)) ? (
       focus_control = ctrl_phase_id;
@@ -719,24 +723,24 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
     );
     rgb(0.67, 0.67, 0.67);
     verticalDashedLine(grid, t, t+h, 1, 5);
-    isGridEnabled(chan, i) ? 
+    isGridEnabled(lane, i) ? 
       (sprintf(str, "%d", i+1); rgb(1,1,1)) 
     : (sprintf(str, "(%d)", i+1); rgb(0.5, 0.5, 0.5));
     gfx_setfont(1, "Arial", 16);
     printCenter(grid,t+h/2,str);
-    mouse_focus && isRButtonRelease() ? toggleGrid(chan, i);
+    mouse_focus && isRButtonRelease() ? toggleGrid(lane, i);
     i+=1;
   );
     
   // Draw beat marks
   rgb(0.8, 0.8, 0.8);
-  (chan == 0) ? gfx_setfont(1, "Arial", 12);
+  (lane == 0) ? gfx_setfont(1, "Arial", 12);
   i=0;
   loop(beats,
     grid = l + i*w/beats;
     gfx_line(grid,t, grid,t+h*0.1);
     gfx_line(grid,t+h*0.9, grid,t+h);
-    (chan == 0) ? (
+    (lane == 0) ? (
       gfx_x = grid + 3;
       gfx_y = t + 1;
       gfx_printf("%d",i+1);
@@ -750,7 +754,7 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
     now = time_precise();
     loop(max_hist,
       birth = v_history_time[i];
-      (birth != 0) && (v_history_chan[i] == chan) ? (
+      (birth != 0) && (v_history_lane[i] == lane) ? (
         hit = v_history_hits[i];
         age = min(max_age, now - birth);
         age_brightness = 0.2 + 1/(0.8*(1+age));
@@ -770,15 +774,15 @@ function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
     gfx_line(x, t, x, t+h);
   );  
   
-  drawToolBar(chan, l+w-2, t+h-2, toolbar_height);
+  drawToolBar(lane, l+w-2, t+h-2, toolbar_height);
   
   rgb(1,0,0);
   gfx_setfont(1, "Arial", 48);
   isRecording() ? (printCenter(w/2, h/2, "RECORDING"));
   gfx_setfont(0);  
  
-  dragPhase(chan,focus_control,divs, l, t, w, h);
-  dragSwing(chan,focus_control,divs, l, t, w, h);
+  dragPhase(lane,focus_control,divs, l, t, w, h);
+  dragSwing(lane,focus_control,divs, l, t, w, h);
   
   printValueEdit(l+w/2, t+h/2);
 
