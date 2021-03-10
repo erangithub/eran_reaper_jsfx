@@ -618,10 +618,10 @@ function drawButton(chan, id, l, t, w, h, str, state) local(focus, button_id, fo
   !active_control && isMouseInRect(l,t,w,h) && mouse_cap & 1 ? active_control = button_id;
   focus = (!active_control || active_control == button_id) && isMouseInRect(l,t,w,h);
   focus_brightness = 0.1 * focus;
-  state_brightness = 0.5 * state;
+  state_brightness = 0.6 * state;
   press_brightness = 0.2 * focus * (mouse_cap & 1);
   delta = focus_brightness - press_brightness;
-  rgb(delta, delta+state_brightness, delta+state_brightness);
+  rgb(delta+state_brightness, delta+state_brightness, delta);
   gfx_a = 0.4;
   gfx_rect(l,t,w,h);
   rgb(0.5+delta, 0.5+delta, 0.5+delta);
@@ -647,8 +647,8 @@ function drawToolBar(chan, r, b, h) local(release, f1, f2, f3, f4, f5, f6, butto
     f1 = drawButton(chan, control_div_up, button_left, button_top, h, h, "+", 0);
     button_left -= h + 2;
     f2 = drawButton(chan, control_div_down, button_left, button_top, h, h, "-", 0);
-    button_left -= h + 8;
-    f5 = drawButton(chan, control_click, button_left, button_top, h, h, "c", getClick(chan));
+    button_left -= h*1.5 + 8;
+    f5 = drawButton(chan, control_click, button_left, button_top, h*1.5, h, "click", getClick(chan));
     button_left -= h + 2;
     f3 = drawButton(chan, control_vel_up, button_left, button_top, h, h, "v+", 0);
     button_left -= h + 2;
