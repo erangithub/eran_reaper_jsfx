@@ -638,7 +638,7 @@ function drawToolBar(chan, r, b, h) local(release, f1, f2, f3, f4, f5, f6, butto
   f6 && mouse_wheel_dir ? (listen_note_chan = 0; setClickNote(chan, click_note+mouse_wheel_dir));
 );
 
-function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
+function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
 (  
   focus_control = 0;
   toolbar_height = 20;
@@ -681,7 +681,7 @@ function DrawGrid(chan, l,t,w,h) local(x,y, hit,now,low,grid,high,i,divs, toolba
     verticalDashedLine(grid, t, t+h, 1, 5);
     sprintf(str, "%d", i+1);
     gfx_setfont(1, "Arial", 12);
-    printBottomRight(grid+3,t+h,str);
+    printCenter(grid,t+h/2,str);
     i+=1;
   );
     
