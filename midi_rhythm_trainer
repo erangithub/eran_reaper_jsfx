@@ -639,34 +639,40 @@ function drawToolBar(chan, r, b, h) local(release, f1, f2, f3, f4, f5, f6, butto
   mouse_wheel_dir = mouse_wheel > 0 ? 1 : mouse_wheel < 0 ? -1 : 0;
   button_left = r-h;
   button_top = b-h;
-  f1 = drawButton(chan, control_div_up, button_left, button_top, h, h, "+", 0);
-  button_left -= h + 2;
-  f2 = drawButton(chan, control_div_down, button_left, button_top, h, h, "-", 0);
-  button_left -= h + 8;
-  f5 = drawButton(chan, control_click, button_left, button_top, h, h, "c", getClick(chan));
-  button_left -= h + 2;
-  f3 = drawButton(chan, control_vel_up, button_left, button_top, h, h, "v+", 0);
-  button_left -= h + 2;
-  f4 = drawButton(chan, control_vel_down, button_left, button_top, h, h,  "v-", 0);
-  button_left -= 1.5*h + 2;
-  click_note = getClickNote(chan);
-  f6 = drawButton(chan, control_note, button_left, button_top, h*1.5, h, noteName(click_note), (listen_note_chan == chan+1));
- 
-  release && f1 ? setDivs(chan, getDivs(chan)+1); 
-  release && f2 ? setDivs(chan, getDivs(chan)-1); 
-  release && f3 ? setClickVel(chan, floor(getClickVel(chan)/4)*4+4); 
-  release && f4 ? setClickVel(chan, floor(getClickVel(chan)/4)*4-4);
-  release && f5 ? setClick(chan, !getClick(chan));
-  release && f6 ? listen_note_chan = (listen_note_chan == 1+chan)? 0 : 1+chan;
+  f0 = drawButton(chan, control_div_up, button_left, button_top, h, h, expand_toolbar ? ">>" : "<<", 0);
+  release && f0 ? expand_toolbar = !expand_toolbar;
   
-  f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(chan));
-  f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(chan));
-  f1 || f2 && mouse_wheel_dir ? setDivs(chan, getDivs(chan)+mouse_wheel_dir);
-  f3 || f4 && mouse_wheel_dir ? setClickVel(chan, getClickVel(chan)+mouse_wheel_dir);
-  f5 ? sprintf(#value_edit, "Click: %s", getClick(chan) ? "On" : "Off");
-  (listen_note_chan == chan+1) ? sprintf(#value_edit, "Click Note: LISTENING", noteName(click_note), click_note) 
-  : f6 ? sprintf(#value_edit, "Click Note: %s (%d)", noteName(click_note), click_note);
-  f6 && mouse_wheel_dir ? (listen_note_chan = 0; setClickNote(chan, click_note+mouse_wheel_dir));
+  expand_toolbar ? (
+    button_left -= h + 2;
+    f1 = drawButton(chan, control_div_up, button_left, button_top, h, h, "+", 0);
+    button_left -= h + 2;
+    f2 = drawButton(chan, control_div_down, button_left, button_top, h, h, "-", 0);
+    button_left -= h + 8;
+    f5 = drawButton(chan, control_click, button_left, button_top, h, h, "c", getClick(chan));
+    button_left -= h + 2;
+    f3 = drawButton(chan, control_vel_up, button_left, button_top, h, h, "v+", 0);
+    button_left -= h + 2;
+    f4 = drawButton(chan, control_vel_down, button_left, button_top, h, h,  "v-", 0);
+    button_left -= 1.5*h + 2;
+    click_note = getClickNote(chan);
+    f6 = drawButton(chan, control_note, button_left, button_top, h*1.5, h, noteName(click_note), (listen_note_chan == chan+1));
+   
+    release && f1 ? setDivs(chan, getDivs(chan)+1); 
+    release && f2 ? setDivs(chan, getDivs(chan)-1); 
+    release && f3 ? setClickVel(chan, floor(getClickVel(chan)/4)*4+4); 
+    release && f4 ? setClickVel(chan, floor(getClickVel(chan)/4)*4-4);
+    release && f5 ? setClick(chan, !getClick(chan));
+    release && f6 ? listen_note_chan = (listen_note_chan == 1+chan)? 0 : 1+chan;
+    
+    f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(chan));
+    f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(chan));
+    f1 || f2 && mouse_wheel_dir ? setDivs(chan, getDivs(chan)+mouse_wheel_dir);
+    f3 || f4 && mouse_wheel_dir ? setClickVel(chan, getClickVel(chan)+mouse_wheel_dir);
+    f5 ? sprintf(#value_edit, "Click: %s", getClick(chan) ? "On" : "Off");
+    (listen_note_chan == chan+1) ? sprintf(#value_edit, "Click Note: LISTENING", noteName(click_note), click_note) 
+    : f6 ? sprintf(#value_edit, "Click Note: %s (%d)", noteName(click_note), click_note);
+    f6 && mouse_wheel_dir ? (listen_note_chan = 0; setClickNote(chan, click_note+mouse_wheel_dir));
+  )
 );
 
 function DrawGrid(chan, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
