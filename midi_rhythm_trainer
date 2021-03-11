@@ -57,6 +57,16 @@ slider56:-1<-2147483648,2147483647,1>-Mask4
 @init
 note_on = $x90;
 
+sliders_per_lane = 10;
+first_lane_slider = 20;
+slider_offset_div = 0;
+slider_offset_swing = 1;
+slider_offset_phase = 2;
+slider_offset_click = 3;
+slider_offset_click_note = 4;
+slider_offset_click_vel = 5;
+slider_offset_mask = 6;
+
 control_phase = 1;
 control_swing = 2;
 control_button_div_up = 3;
@@ -118,119 +128,89 @@ function recordRecording(reltime, lane) local(i)
 );
 
 // Getters and Setters
+function getSliderIdx(lane, offset)
+(
+   first_lane_slider + sliders_per_lane*lane + offset;
+);
+
+function getSlider(lane, offset) local(idx)
+( 
+  (entry_mode == 1) ? 0 : slider(getSliderIdx(lane, offset))
+);
+
+function setSlider(lane, offset, value, reset_play) local(idx)
+( 
+  idx = getSliderIdx(lane, offset);
+  ((entry_mode == 1) ? 0 : (slider(idx) = value; slider_automate(2 ^ idx)));
+  reset_play ? resetPlay();
+);
+
 
 function getDivs(lane)
 ( 
-  (entry_mode == 1) ? v_rec_indices[lane]
-  : lane == 0 ? div0 
-  : lane == 1 ? div1 
-  : lane == 2 ? div2
-  : div3;
+  getSlider(lane, slider_offset_divs);
 );
 
 function setDivs(lane, value)
 (
-  (entry_mode == 1) ? 0
-  : lane == 0 ? (slider20 = value; slider_automate(slider20); div0=max(1,min(32,value)))
-  : lane == 1 ? (slider30 = value; slider_automate(slider30); div1=max(1,min(32,value)))
-  : lane == 2 ? (slider40 = value; slider_automate(slider40); div2=max(1,min(32,value)))
-  : (slider50 = value; slider_automate(slider50); div3=max(1,min(32,value)));
-  max_divs = max(div0, max(div1, max(div2, div3)));
-  resetPlay();
+  setSlider(lane, slider_offset_divs, value, 1);
 );
 
 function getSwing(lane)
-( 
-  (entry_mode == 1) ? 0
-  : lane == 0 ? swing0 
-  : lane == 1 ? swing1 
-  : lane == 2 ? swing2
-  : swing3;
+(
+  getSlider(lane, slider_offset_swing);
 );
 
-function setSwing(lane, value)
+function setSwing(lane, value) local(idx)
 (
-  ((entry_mode == 1) ? 0
-  : lane == 0 ? (slider21 = value; slider_automate(slider21); swing0=value)
-  : lane == 1 ? (slider31 = value; slider_automate(slider31); swing1=value)
-  : lane == 2 ? (slider41 = value; slider_automate(slider41); swing2=value)
-  : (slider51 = value; slider_automate(slider51); swing3=value););
-  resetPlay();
+  setSlider(lane, slider_offset_swing, value, 1);
 );
 
 function getPhase(lane)
-( 
-  (entry_mode == 1) ? 0
-  : lane == 0 ? phase0 
-  : lane == 1 ? phase1 
-  : lane == 2 ? phase2
-  : phase3;
+(
+  getSlider(lane, slider_offset_phase);
 );
 
-function setPhase(lane, value)
+function setPhase(lane, value) local(idx)
 (
-  (entry_mode == 1) ? 0
-  : lane == 0 ? (slider22 = value; slider_automate(slider22); phase0=value)
-  : lane == 1 ? (slider32 = value; slider_automate(slider32); phase1=value)
-  : lane == 2 ? (slider42 = value; slider_automate(slider42); phase2=value)
-  : (slider52 = value; slider_automate(slider52); phase3=value);
-  resetPlay();
+  setSlider(lane, slider_offset_phase, value, 1);
 );
 
 function getClick(lane)
 (
-  lane == 0 ? click0 
-  : lane == 1 ? click1 
-  : lane == 2 ? click2
-  : click3;
+  getSlider(lane, slider_offset_click);
 );
 
-function setClick(lane, value)
+function setClick(lane, value) local(idx)
 (
-  lane == 0 ? (slider23 = value; slider_automate(slider23); click0=max(0,min(1,value)))
-  : lane == 1 ? (slider33 = value; slider_automate(slider33); click1=max(0,min(1,value)))
-  : lane == 2 ? (slider43 = value; slider_automate(slider43); click2=max(0,min(1,value)))
-  : (slider53 = value; slider_automate(slider53); click3=max(0,min(1,value)));
-  resetPlay();
+  setSlider(lane, slider_offset_click, value, 1);
 );
 
 function getClickNote(lane)
 (
-  lane == 0 ? click_note0 
-  : lane == 1 ? click_note1 
-  : lane == 2 ? click_note2
-  : click_note3;
+  getSlider(lane, slider_offset_click_note);
 );
 
-function setClickNote(lane, value)
+function setClickNote(lane, value) local(idx)
 (
-  lane == 0 ? (slider24 = value; click_note0 = max(0, min(127, value)))
-  : lane == 1 ? (slider34 = value; click_note1 = max(0, min(127, value)))
-  : lane == 2 ? (slider44 = value; click_note2 = max(0, min(127, value)))
-  : lane == 3 ? (slider44 = value; click_note3 = max(0, min(127, value)));
+  setSlider(lane, slider_offset_click_note, value, 0);
 );
 
 function getClickVel(lane)
 (
-  lane == 0 ? click_vel0 
-  : lane == 1 ? click_vel1 
-  : lane == 2 ? click_vel2
-  : click_note3;
+  getSlider(lane, slider_offset_click_vel);
 );
 
-function setClickVel(lane, value)
+function setClickVel(lane, value) local(idx)
 (
-  lane == 0 ? (slider25 = value; click_vel0 = max(0, min(127, value)))
-  : lane == 1 ? (slider35 = value; click_vel1 = max(0, min(127, value)))
-  : lane == 2 ? (slider45 = value; click_vel2 = max(0, min(127, value)))
-  : lane == 3 ? (slider45 = value; click_vel3 = max(0, min(127, value)));
+  setSlider(lane, slider_offset_click_vel, value, 0);
 );
 
 function isGridEnabled(lane, idx) local(d,idx,mask)
 (
   d = getDivs(lane);
   idx = (idx + d) % d;
-  mask = (lane == 0 ? mask0 : lane == 1 ? mask1 : lane == 2 ? mask2 : mask3);
+  mask = getSlider(lane, slider_offset_mask);
   mask & (1<<idx);
 );
 
@@ -238,10 +218,7 @@ function toggleGrid(lane, idx) local(d,idx)
 (
   d = getDivs(lane);
   idx = (idx + d) % d;
-  lane == 0 ? (mask0 = mask0 ~ (1<<idx); slider26 = mask0)
-  : lane == 1 ? (mask1 = mask1 ~ (1<<idx); slider36 = mask1)
-  : lane == 2 ? (mask2 = mask2 ~ (1<<idx); slider46 = mask2)
-  : lane == 3 ? (mask3 = mask3 ~ (1<<idx); slider56 = mask3)  
+  setSlider(lane, slider_offset_mask, getSlider(lane, slider_offset_mask) ~ (1<<idx), 0);
 );
 
 //
@@ -308,6 +285,16 @@ function isHit(reltime, lane) local(i, hit, min_late, min_early, delta_early, de
 
 
 @slider
+function updateMaxDivs() local(i)
+(
+  max_divs = 0;
+  i=0;
+  while (i<num_lanes) (
+    max_divs = max(max_divs, getDivs(i));
+    i += 1;
+  );
+);
+
 beats = slider1;
 entry_mode = slider2;
 num_lanes = slider3;
@@ -316,40 +303,7 @@ error_bound = slider4/100;
 auto_shrink = slider5;
 event_style = slider6;
 
-div0 = slider20;
-swing0 = slider21;
-phase0 = slider22;
-click0 = slider23;
-click_note0 = slider24;
-click_vel0 = slider25;
-mask0 = slider26;
-
-div1 = slider30 * (num_lanes > 1);
-swing1 = slider31;
-phase1 = slider32;
-click1 = slider33;
-click_note1 = slider34;
-click_vel1 = slider35;
-mask1 = slider36;
-
-div2 = slider40 * (num_lanes > 2);
-swing2 = slider41;
-phase2 = slider42;
-click2 = slider43;
-click_note2 = slider44;
-click_vel2 = slider45;
-mask2 = slider36;
-
-div3 = slider50 * (num_lanes > 3);
-swing3 = slider51;
-phase3 = slider52;
-click3 = slider53;
-click_note3 = slider54;
-click_vel3 = slider55;
-mask3 = slider36;
-
-max_divs = max(div0, max(div1, max(div2, div3)));
-
+updateMaxDivs();
 resetPlay();
 
 @block
@@ -407,9 +361,9 @@ function recordTraining() local(t)
 
 play_state ? (
   getClick(0) ? playGrid(0);
-  getClick(1) && div1 ? playGrid(1);
-  getClick(2) && div2 ? playGrid(2);
-  getClick(3) && div3 ? playGrid(3);
+  getClick(1) && (num_lanes>1) ? playGrid(1);
+  getClick(2) && (num_lanes>2) ? playGrid(2);
+  getClick(3) && (num_lanes>3) ? playGrid(3);
 );
 
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
@@ -802,16 +756,15 @@ gfx_printf("Rhythm Grid:");
 
 width = gfx_w-xmargin*2;
 total_grid_height = max(200, (gfx_h - header_margin - footer_margin) * 0.7);
-non_zero_divisions = 1 + (getDivs(1) != 0) + (getDivs(2) != 0) + (getDivs(3) !=0);
-total_grid_height -= total_grid_height % non_zero_divisions;
+total_grid_height -= total_grid_height % num_lanes;
 
 grid_margin = 6;
-grid_height = total_grid_height / non_zero_divisions;
+grid_height = total_grid_height / num_lanes;
 DrawGrid(0, xmargin, header_margin, width, grid_height-grid_margin);
 y = header_margin + grid_height;
-getDivs(1) ? (DrawGrid(1, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
-getDivs(2) ? (DrawGrid(2, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
-getDivs(3) ? (DrawGrid(3, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
+num_lanes > 1 ? (DrawGrid(1, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
+num_lanes > 2 ? (DrawGrid(2, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
+num_lanes > 3 ? (DrawGrid(3, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
 
 // Draw Training graph
 //-------------------
