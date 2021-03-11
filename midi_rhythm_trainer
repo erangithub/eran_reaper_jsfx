@@ -22,7 +22,7 @@ slider5:1<0,1,1{Off,On}>Auto Shrink Error Bound
 slider6:0<0,4,1{Circles,Note Names,Note Numbers}>Event Drawing Style
 
 // Hidden sliders per lane
-slider20:8<1,64,1>-Divisions1
+slider20:8<1,32,1>-Divisions1
 slider21:0<-0.5,0.5,0.01>-Swing1
 slider22:0<0,1,0.01>-Phase1
 slider23:0<0,1,1>-Click1
@@ -30,7 +30,7 @@ slider24:60<0,127,1>-ClickNote1
 slider25:60<0,127,1>-ClickVel1
 slider26:-1<-2147483648,2147483647,1>-Mask1
 
-slider30:8<1,64,1>-Divisions2
+slider30:8<1,32,1>-Divisions2
 slider31:0<-0.5,0.5,0.01>-Swing2
 slider32:0<0,1,0.01>-Phase2
 slider33:0<0,1,1>-Click2
@@ -38,7 +38,7 @@ slider34:62<0,127,1>-ClickNote2
 slider35:60<0,127,1>-ClickVel2
 slider36:-1<-2147483648,2147483647,1>-Mask2
 
-slider40:8<1,64,1>-Divisions3
+slider40:8<1,32,1>-Divisions3
 slider41:0<-0.5,0.5,0.01>-Swing3
 slider42:0<0,1,0.01>-Phase3
 slider43:0<0,1,1>-Click3
@@ -46,7 +46,7 @@ slider44:64<0,127,1>-ClickNote3
 slider45:60<0,127,1>-ClickVel3
 slider46:-1<-2147483648,2147483647,1>-Mask3
 
-slider50:8<1,64,1>-Divisions4
+slider50:8<1,32,1>-Divisions4
 slider51:0<-0.5,0.5,0.01>-Swing4
 slider52:0<0,1,0.01>-Phase4
 slider53:0<0,1,1>-Click4
@@ -131,10 +131,10 @@ function getDivs(lane)
 function setDivs(lane, value)
 (
   (entry_mode == 1) ? 0
-  : lane == 0 ? (slider20 = value; slider_automate(slider20); div0=max(1,min(64,value)))
-  : lane == 1 ? (slider30 = value; slider_automate(slider30); div1=max(1,min(64,value)))
-  : lane == 2 ? (slider40 = value; slider_automate(slider40); div2=max(1,min(64,value)))
-  : (slider50 = value; slider_automate(slider50); div3=max(1,min(64,value)));
+  : lane == 0 ? (slider20 = value; slider_automate(slider20); div0=max(1,min(32,value)))
+  : lane == 1 ? (slider30 = value; slider_automate(slider30); div1=max(1,min(32,value)))
+  : lane == 2 ? (slider40 = value; slider_automate(slider40); div2=max(1,min(32,value)))
+  : (slider50 = value; slider_automate(slider50); div3=max(1,min(32,value)));
   max_divs = max(div0, max(div1, max(div2, div3)));
   resetPlay();
 );
