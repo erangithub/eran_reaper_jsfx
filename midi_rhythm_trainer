@@ -16,10 +16,10 @@ desc: MIDI Rhythm Trainer
     
 slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
-slider5:1<1,4,1>Number of Lanes
-slider10:50<1,100,0.1>Error Bound (%)
-slider11:1<0,1,1{Off,On}>Auto Shrink Error Bound
-slider12:0<0,4,1{Circles,Note Names,Note Numbers}>Event Drawing Style
+slider3:1<1,4,1>Number of Lanes
+slider4:50<1,100,0.1>Error Bound (%)
+slider5:1<0,1,1{Off,On}>Auto Shrink Error Bound
+slider6:0<0,4,1{Circles,Note Names,Note Numbers}>Event Drawing Style
 
 // Hidden sliders per lane
 slider20:8<1,64,1>-Divisions1
@@ -283,7 +283,7 @@ function adjustErrorBound(hit_rate) local(level)
   (hit_rate > 0.9) ? 
     (level = (error_bound < 0.2 ? 0.001 : error_bound <= 0.3 ? 0.002 : error_bound <= 0.4 ?  0.005 : 0.01);
     (error_bound = max(0, error_bound - level)));
-  slider10 = error_bound*100;
+  slider4 = error_bound*100;
 );
 
 // returns: 0 == hit, -1 == early, 1 == late
@@ -310,11 +310,11 @@ function isHit(reltime, lane) local(i, hit, min_late, min_early, delta_early, de
 @slider
 beats = slider1;
 entry_mode = slider2;
-num_lanenels = slider5;
+num_lanes = slider3;
 
-error_bound = slider10/100;
-auto_shrink = slider11;
-event_style = slider12;
+error_bound = slider4/100;
+auto_shrink = slider5;
+event_style = slider6;
 
 div0 = slider20;
 swing0 = slider21;
@@ -324,7 +324,7 @@ click_note0 = slider24;
 click_vel0 = slider25;
 mask0 = slider26;
 
-div1 = slider30 * (num_lanenels > 1);
+div1 = slider30 * (num_lanes > 1);
 swing1 = slider31;
 phase1 = slider32;
 click1 = slider33;
@@ -332,7 +332,7 @@ click_note1 = slider34;
 click_vel1 = slider35;
 mask1 = slider36;
 
-div2 = slider40 * (num_lanenels > 2);
+div2 = slider40 * (num_lanes > 2);
 swing2 = slider41;
 phase2 = slider42;
 click2 = slider43;
@@ -340,7 +340,7 @@ click_note2 = slider44;
 click_vel2 = slider45;
 mask2 = slider36;
 
-div3 = slider50 * (num_lanenels > 3);
+div3 = slider50 * (num_lanes > 3);
 swing3 = slider51;
 phase3 = slider52;
 click3 = slider53;
