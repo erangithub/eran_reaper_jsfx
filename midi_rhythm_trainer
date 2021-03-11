@@ -858,16 +858,17 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
       (birth != 0) && (v_history_lane[i] == lane) ? (
         hit = v_history_hits[i];
         age = min(max_age, now - birth);
-        age_brightness = 0.2 + 1/(0.8*(1+age));
-        (hit == 0) ? rgb(0,age_brightness,0) : 
-          (hit == 1) ? rgb(age_brightness,0,0) : rgb(0,0,age_brightness);
+        (hit == 0) ? rgb(0,1,0) : 
+          (hit == 1) ? rgb(1,0,0) : rgb(0,0,1);
         x = w * v_history_rel_time[i];
         y = age*20;
+        gfx_a = 1 - sqrt(y/h);
         y < h ? (drawEvent(l+x,t+y, v_history_notes[i], (hit == 0)));
         age == max_age ? (v_history_time[i] = 0);
       );
       i += 1;
     );
+    gfx_a = 1;
     
     // Draw vertical time line 
     rgb(1,1,0);
