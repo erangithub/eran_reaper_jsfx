@@ -18,7 +18,7 @@ slider1:4<1,32,1>Beats
 slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
 slider3:1<1,4,1>Number of Lanes
 slider4:50<1,100,0.1>Error Bound (%)
-slider5:1<0,1,1{Off,On}>Auto Shrink Error Bound
+slider5:0<0,1,1{Off,On}>Auto Shrink Error Bound
 slider6:0<0,4,1{Circles,Note Names,Note Numbers}>Event Drawing Style
 
 // Hidden sliders per lane
@@ -170,9 +170,20 @@ function getDivs(lane)
   getSlider(lane, slider_offset_divs);
 );
 
+function updateMaxDivs() local(i)
+(
+  max_divs = 0;
+  i=0;
+  while (i<num_lanes) (
+    max_divs = max(max_divs, getDivs(i));
+    i += 1;
+  );
+);
+
 function setDivs(lane, value)
 (
   setSlider(lane, slider_offset_divs, value, 1, 32, 1);
+  updateMaxDivs();
 );
 
 function getSwing(lane)
@@ -338,15 +349,6 @@ function controlId(lane, control)
 );
 
 @slider
-function updateMaxDivs() local(i)
-(
-  max_divs = 0;
-  i=0;
-  while (i<num_lanes) (
-    max_divs = max(max_divs, getDivs(i));
-    i += 1;
-  );
-);
 
 beats = slider1;
 entry_mode = slider2;
