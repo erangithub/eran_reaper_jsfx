@@ -29,6 +29,9 @@ slider23:0<0,1,1>-Click1
 slider24:60<0,127,1>-ClickNote1
 slider25:60<0,127,1>-ClickVel1
 slider26:-1<-2147483648,2147483647,1>-Mask1
+slider27:0<1,16,1>-InputChannel1
+slider28:0<0,127,1>-InputMinNote1
+slider29:127<0,127,1>-InputMaxNote1
 
 slider30:8<1,32,1>-Divisions2
 slider31:0<-0.5,0.5,0.01>-Swing2
@@ -37,6 +40,9 @@ slider33:0<0,1,1>-Click2
 slider34:62<0,127,1>-ClickNote2
 slider35:60<0,127,1>-ClickVel2
 slider36:-1<-2147483648,2147483647,1>-Mask2
+slider37:0<0,16,1>-InputChannel2
+slider38:0<0,127,1>-InputMinNote2
+slider39:127<0,127,1>-InputMaxNote2
 
 slider40:8<1,32,1>-Divisions3
 slider41:0<-0.5,0.5,0.01>-Swing3
@@ -45,6 +51,9 @@ slider43:0<0,1,1>-Click3
 slider44:64<0,127,1>-ClickNote3
 slider45:60<0,127,1>-ClickVel3
 slider46:-1<-2147483648,2147483647,1>-Mask3
+slider47:0<0,16,1>-InputChannel3
+slider48:0<0,127,1>-InputMinNote3
+slider49:127<0,127,1>-InputMaxNote3
 
 slider50:8<1,32,1>-Divisions4
 slider51:0<-0.5,0.5,0.01>-Swing4
@@ -53,19 +62,25 @@ slider53:0<0,1,1>-Click4
 slider54:65<0,127,1>-ClickNote4
 slider55:60<0,127,1>-ClickVel4
 slider56:-1<-2147483648,2147483647,1>-Mask4
+slider57:0<0,16,1>-InputChannel4
+slider58:0<0,127,1>-InputMinNote4
+slider59:127<0,127,1>-InputMaxNote4
 
 @init
 note_on = $x90;
 
 sliders_per_lane = 10;
 first_lane_slider = 20;
-slider_offset_div = 0;
+slider_offset_divs = 0;
 slider_offset_swing = 1;
 slider_offset_phase = 2;
 slider_offset_click = 3;
 slider_offset_click_note = 4;
 slider_offset_click_vel = 5;
 slider_offset_mask = 6;
+slider_offset_in_channel = 7;
+slider_offset_in_min_note = 8;
+slider_offset_in_max_note = 9;
 
 control_phase = 1;
 control_swing = 2;
@@ -74,7 +89,11 @@ control_button_div_down = 4;
 control_button_click = 5;
 control_button_vel_up = 6;
 control_button_vel_down = 7;
-control_button_note = 8;
+control_button_click_note = 8;
+control_button_in_channel_up = 9;
+control_button_in_channel_down = 10;
+control_button_in_min_note = 11;
+control_button_in_max_note = 12;
 
 hist_idx = 0;
 max_hist = 200;
@@ -138,10 +157,10 @@ function getSlider(lane, offset) local(idx)
   (entry_mode == 1) ? 0 : slider(getSliderIdx(lane, offset))
 );
 
-function setSlider(lane, offset, value, reset_play) local(idx)
+function setSlider(lane, offset, value, min_val, max_val, reset_play) local(idx)
 ( 
   idx = getSliderIdx(lane, offset);
-  ((entry_mode == 1) ? 0 : (slider(idx) = value; slider_automate(2 ^ idx)));
+  ((entry_mode == 1) ? 0 : (slider(idx) = min(max_val, max(min_val, value)); slider_automate(2 ^ idx)));
   reset_play ? resetPlay();
 );
 
@@ -153,7 +172,7 @@ function getDivs(lane)
 
 function setDivs(lane, value)
 (
-  setSlider(lane, slider_offset_divs, value, 1);
+  setSlider(lane, slider_offset_divs, value, 1, 32, 1);
 );
 
 function getSwing(lane)
@@ -163,7 +182,7 @@ function getSwing(lane)
 
 function setSwing(lane, value) local(idx)
 (
-  setSlider(lane, slider_offset_swing, value, 1);
+  setSlider(lane, slider_offset_swing, value, -0.5, 0.5, 1);
 );
 
 function getPhase(lane)
@@ -173,7 +192,7 @@ function getPhase(lane)
 
 function setPhase(lane, value) local(idx)
 (
-  setSlider(lane, slider_offset_phase, value, 1);
+  setSlider(lane, slider_offset_phase, value, 0, 1, 1);
 );
 
 function getClick(lane)
@@ -183,7 +202,7 @@ function getClick(lane)
 
 function setClick(lane, value) local(idx)
 (
-  setSlider(lane, slider_offset_click, value, 1);
+  setSlider(lane, slider_offset_click, value, 0, 1, 1);
 );
 
 function getClickNote(lane)
@@ -193,7 +212,7 @@ function getClickNote(lane)
 
 function setClickNote(lane, value) local(idx)
 (
-  setSlider(lane, slider_offset_click_note, value, 0);
+  setSlider(lane, slider_offset_click_note, value, 0, 127, 0);
 );
 
 function getClickVel(lane)
@@ -203,7 +222,7 @@ function getClickVel(lane)
 
 function setClickVel(lane, value) local(idx)
 (
-  setSlider(lane, slider_offset_click_vel, value, 0);
+  setSlider(lane, slider_offset_click_vel, value, 0, 127, 0);
 );
 
 function isGridEnabled(lane, idx) local(d,idx,mask)
@@ -218,7 +237,37 @@ function toggleGrid(lane, idx) local(d,idx)
 (
   d = getDivs(lane);
   idx = (idx + d) % d;
-  setSlider(lane, slider_offset_mask, getSlider(lane, slider_offset_mask) ~ (1<<idx), 0);
+  setSlider(lane, slider_offset_mask, getSlider(lane, slider_offset_mask) ~ (1<<idx), -2147483648, 2147483647, 0);
+);
+
+function getInputChannel(lane)
+(
+  getSlider(lane, slider_offset_in_channel);
+);
+
+function setInputChannel(lane, value) local(idx)
+(
+  setSlider(lane, slider_offset_in_channel, value, 0, 16, 0);
+);
+
+function getInputMinNote(lane)
+(
+  getSlider(lane, slider_offset_in_min_note);
+);
+
+function setInputMinNote(lane, value) local(idx)
+(
+  setSlider(lane, slider_offset_in_min_note, value, 0, 127, 0);
+);
+
+function getInputMaxNote(lane)
+(
+  getSlider(lane, slider_offset_in_max_note);
+);
+
+function setInputMaxNote(lane, value) local(idx)
+(
+  setSlider(lane, slider_offset_in_max_note, value, 0, 127, 0);
 );
 
 //
@@ -283,6 +332,10 @@ function isHit(reltime, lane) local(i, hit, min_late, min_early, delta_early, de
   hit ? 0 : (min_late > min_early ? -1 : 1); 
 );
 
+function controlId(lane, control)
+(
+  (lane + 1)*1000 + control;
+);
 
 @slider
 function updateMaxDivs() local(i)
@@ -359,6 +412,36 @@ function recordTraining() local(t)
   v_graph_error_bound[graph_idx] = error_bound;
 );
 
+function learnNote(note) local(i) 
+(
+  i = 0;
+  while (listen_note_control && i < num_lanes)
+  (
+    listen_note_control == controlId(i, control_button_click_note) ? 
+      (setClickNote(i, note); listen_note_control = 0)
+    : listen_note_control == controlId(i, control_button_in_min_note) ? 
+      (setInputMinNote(i, note); listen_note_control = 0)     
+    : listen_note_control == controlId(i, control_button_in_max_note) ? 
+      (setInputMaxNote(i, note); listen_note_control = 0);     
+
+    i += 1;
+  );
+  listen_note_control = 0;
+);
+
+function getLaneOfNote(note, channel) local(i, result)
+(
+  result = -1;
+  i = 0;
+  while (i < num_lanes && (result == -1)) (
+    in_chan = getInputChannel(i);
+    ((in_chan == 0) || (in_chan == channel + 1)) && (note >= getInputMinNote(i)) && (note <= getInputMaxNote(i)) ?
+      result = i;
+    i += 1;
+  );
+  result; 
+);
+
 play_state ? (
   getClick(0) ? playGrid(0);
   getClick(1) && (num_lanes>1) ? playGrid(1);
@@ -373,11 +456,15 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    play_state && noteStatus==note_on && msg3!=0 ? (
      note = msg2;
      reltime = getRelTime(offset);
-     lane = channel % 4;
-     hit = isHit(reltime, lane);
-     isrec = isRecording();
-     (isrec || (hit == 0)) ? (midisend(offset,msg1,note,msg3));
-     isrec ? recordRecording(reltime, lane) : recordHistory(reltime, hit, lane, note);
+     lane = getLaneOfNote(note, channel);
+     lane < 0 ?
+       midisend(offset, msg1, msg2, msg3)
+     : (
+       hit = isHit(reltime, lane);
+       isrec = isRecording();
+       (isrec || (hit == 0)) ? (midisend(offset,msg1,note,msg3));
+       isrec ? recordRecording(reltime, lane) : recordHistory(reltime, hit, lane, note)
+     )
    ) : (
      enable_recording = 1;
      midisend(offset,msg1,msg2,msg3); // passthrough other events
@@ -385,11 +472,10 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
   
    play_state ? recordTraining();
    
-   noteStatus == note_on && msg3!=0 && listen_note_lane ? (
+   noteStatus == note_on && msg3!=0 && listen_note_control ? (
      note = msg2;
-     setClickNote(listen_note_lane-1, note);
+     learnNote(note);
      midisend(offset,msg1,msg2,msg3);
-     listen_note_lane = 0;
    );
 );
 
@@ -513,11 +599,6 @@ function isMouseInRect(l,t,w,h)
   mouse_x >= l && mouse_x <= l+w && mouse_y >= t && mouse_y <= t+h;
 );
 
-function controlId(lane, control)
-(
-  (lane + 1)*1000 + control;
-);
-
 function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
 (
   ctrl_id = controlId(lane, control_phase);
@@ -570,6 +651,13 @@ function emptyRect(l,t,w,h)
   gfx_lineto(l,t);
 );
 
+function drawText(l,t,w,h,str)
+(
+  rgb(0.7, 0.7, 0.7);
+  gfx_a = 1;
+  printCenter(l+w/2, t+h/2, str);
+);
+
 function drawButton(lane, id, l, t, w, h, str, state) local(focus, button_id, focus_brightness, state_brightness, press_brighness, delta)
 (
   button_id = controlId(lane, id);
@@ -580,7 +668,7 @@ function drawButton(lane, id, l, t, w, h, str, state) local(focus, button_id, fo
   press_brightness = 0.2 * focus * (mouse_cap & 1);
   delta = focus_brightness - press_brightness;
   rgb(delta+state_brightness, delta+state_brightness, delta);
-  gfx_a = 0.4;
+  gfx_a = 0.45;
   gfx_rect(l,t,w,h);
   rgb(0.5+delta, 0.5+delta, 0.5+delta);
   emptyRect(l,t,w,h);
@@ -590,46 +678,105 @@ function drawButton(lane, id, l, t, w, h, str, state) local(focus, button_id, fo
   focus;
 );
 
-function drawToolBar(lane, r, b, h) local(release, f1, f2, f3, f4, f5, f6, button_left, button_top, click_note)
+function toggleListen(control)
+(
+  listen_note_control = listen_note_control == control ? 0 : control;
+);
+
+function drawToolBar(lane, r, b, h) local(release, f1, f2, f3, f4, f5, f6, f7, f8, button_left, button_top, click_note)
 (
   gfx_setfont(1, "Arial", 14);
   release = isLButtonRelease();
-  mouse_wheel_dir = mouse_wheel > 0 ? 1 : mouse_wheel < 0 ? -1 : 0;
+  mouse_wheel_dir = mouse_wheel / 120;
   button_left = r-h;
   button_top = b-h;
-  f0 = drawButton(lane, control_div_up, button_left, button_top, h, h, expand_toolbar ? ">>" : "<<", 0);
+  f0 = drawButton(lane, control_button_expand, button_left, button_top, h, h, expand_toolbar ? ">>" : "<<", 0);
   release && f0 ? expand_toolbar = !expand_toolbar;
   
   expand_toolbar ? (
-    button_left -= h + 2;
-    f1 = drawButton(lane, control_div_up, button_left, button_top, h, h, "+", 0);
-    button_left -= h + 2;
-    f2 = drawButton(lane, control_div_down, button_left, button_top, h, h, "-", 0);
-    button_left -= h*1.5 + 8;
-    f5 = drawButton(lane, control_click, button_left, button_top, h*1.5, h, "click", getClick(lane));
-    button_left -= h + 2;
-    f3 = drawButton(lane, control_vel_up, button_left, button_top, h, h, "v+", 0);
-    button_left -= h + 2;
-    f4 = drawButton(lane, control_vel_down, button_left, button_top, h, h,  "v-", 0);
-    button_left -= 1.5*h + 2;
     click_note = getClickNote(lane);
-    f6 = drawButton(lane, control_note, button_left, button_top, h*1.5, h, noteName(click_note), (listen_note_lane == lane+1));
-   
+    min_note = getInputMinNote(lane);
+    max_note = getInputMaxNote(lane);
+    control_button_click_note_id = controlId(lane, control_button_click_note);
+    control_button_in_max_note_id = controlId(lane, control_button_in_max_note);
+    control_button_in_min_note_id = controlId(lane, control_button_in_min_note);
+        
+    button_width = h;
+    button_left -= button_width + 2;
+    f1 = drawButton(lane, control_button_div_up, button_left, button_top, button_width, h, "+", 0);
+    button_left -= button_width + 2;
+    f2 = drawButton(lane, control_button_div_down, button_left, button_top, button_width, h, "-", 0);
+    button_left -= button_width + 2;
+    drawText(button_left, button_top, button_width, h, " divs:");
+    
+    button_width = h;
+    button_left -= button_width + 2;
+    f5 = drawButton(lane, control_button_click, button_left, button_top, button_width, h, getClick(lane)? "on" : "off", getClick(lane));
+    button_width = h*1.5;
+    button_left -= button_width + 2;
+    f6 = drawButton(lane, control_button_click_note, button_left, button_top, button_width, h, noteName(click_note), 
+                    (listen_note_control == control_button_click_note_id));
+    button_width = h;
+    button_left -= button_width + 2;
+    f3 = drawButton(lane, control_button_vel_up, button_left, button_top, button_width, h, "v+", 0);
+    button_left -= button_width + 2;
+    f4 = drawButton(lane, control_button_vel_down, button_left, button_top, button_width, h,  "v-", 0);
+    button_width = h*1.2;
+    button_left -= button_width+2;
+    drawText(button_left, button_top, button_width, h, "  click:");
+    
+    button_width = h;
+    button_left -= button_width + 2;
+    f7 = drawButton(lane, control_button_in_channel_up, button_left, button_top, button_width, h, "CH+", 0);
+    button_left -= button_width + 2;
+    f8 = drawButton(lane, control_button_in_channel_down, button_left, button_top, button_width, h, "CH-", 0);
+    
+    button_width = h*1.5;
+    button_left -= button_width + 2;
+    f9 = drawButton(lane, control_button_in_max_note, button_left, button_top, button_width, h, noteName(max_note),
+                    (listen_note_control == control_button_in_max_note_id));
+    button_width = h/2;
+    button_left -= button_width + 2;
+    drawText(button_left, button_top, button_width, h, "->");
+    button_width = h*1.5;
+    button_left -= button_width + 2;
+    f10 = drawButton(lane, control_button_in_min_note, button_left, button_top, button_width, h, noteName(min_note),
+                    (listen_note_control == control_button_in_min_note_id));
+    button_left -= button_width + 2;
+    drawText(button_left, button_top, button_width, h, "  input:");   
     release && f1 ? setDivs(lane, getDivs(lane)+1); 
     release && f2 ? setDivs(lane, getDivs(lane)-1); 
     release && f3 ? setClickVel(lane, floor(getClickVel(lane)/4)*4+4); 
     release && f4 ? setClickVel(lane, floor(getClickVel(lane)/4)*4-4);
     release && f5 ? setClick(lane, !getClick(lane));
-    release && f6 ? listen_note_lane = (listen_note_lane == 1+lane)? 0 : 1+lane;
-    
+    release && f6 ? toggleListen(control_button_click_note_id);
+    release && f7 ? setInputChannel(lane, getInputChannel(lane)+1);
+    release && f8 ? setInputChannel(lane, getInputChannel(lane)-1);
+    release && f9 ? toggleListen(control_button_in_max_note_id);
+    release && f10 ? toggleListen(control_button_in_min_note_id);
+        
     f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(lane));
     f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(lane));
-    f1 || f2 && mouse_wheel_dir ? setDivs(lane, getDivs(lane)+mouse_wheel_dir);
-    f3 || f4 && mouse_wheel_dir ? setClickVel(lane, getClickVel(lane)+mouse_wheel_dir);
     f5 ? sprintf(#value_edit, "Click: %s", getClick(lane) ? "On" : "Off");
-    (listen_note_lane == lane+1) ? sprintf(#value_edit, "Click Note: LISTENING", noteName(click_note), click_note) 
+    (listen_note_control == control_button_click_note_id) ? sprintf(#value_edit, "Click Note: LISTENING") 
     : f6 ? sprintf(#value_edit, "Click Note: %s (%d)", noteName(click_note), click_note);
-    f6 && mouse_wheel_dir ? (listen_note_lane = 0; setClickNote(lane, click_note+mouse_wheel_dir));
+    in_chan = getInputChannel(lane);
+    f7 || f8 ? (
+      in_chan ? sprintf(#value_edit, "Input Channel: %d", in_chan)
+              : sprintf(#value_edit, "Input Channel: ALL");
+    );
+    (listen_note_control == control_button_in_max_note_id) ? sprintf(#value_edit, "Input Max Note: LISTENING") 
+    : f9 ? sprintf(#value_edit, "Input Max Note: %s (%d)", noteName(max_note), max_note);
+    (listen_note_control == control_button_in_min_note_id) ? sprintf(#value_edit, "Input Min Note: LISTENING") 
+    : f10 ? sprintf(#value_edit, "Input Min Note: %s (%d)", noteName(min_note), min_note); 
+    mouse_wheel_dir ? (
+      (f1 || f2) ? setDivs(lane, getDivs(lane)+mouse_wheel_dir)
+      : (f3 || f4) ? setClickVel(lane, getClickVel(lane)+mouse_wheel_dir)
+      : f6 && (listen_note_control != control_button_click_note_id) ? setClickNote(lane, click_note+mouse_wheel_dir)
+      : (f7 || f8) ? setInputChannel(lane, getInputChannel(lane)+mouse_wheel_dir)
+      : f9 && (listen_note_control != control_button_in_max_note_id) ? setInputMaxNote(lane, max_note+mouse_wheel_dir)
+      : f10 && (listen_note_control != control_button_in_min_note_id) ? setInputMinNote(lane, min_note+mouse_wheel_dir)
+    );
   )
 );
 
