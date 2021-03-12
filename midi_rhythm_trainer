@@ -98,7 +98,7 @@ control_button_in_max_note = 12;
 hist_idx = 0;
 max_hist = 200;
 max_age = 60;
-max_graph = 10*60;
+max_graph = 15*60;
 graph_start = 0;
 graph_idx = 0;
 hit_memory = 0.85;
@@ -889,9 +889,70 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   dragSwing(lane,focus_control,divs, l, t, w, h);
   
   printValueEdit(l+w/2, t+h/2);
-
-  
+ 
   drawFrame(l-1, t-1, w+2, h+2);
+);
+
+function drawTrainingGraphTitle(left, top)
+(
+  gfx_x = left;
+  gfx_y = top;
+  gfx_setfont(1, "Arial", 15);
+  rgb(1,1,1);
+  gfx_printf("Training Graph (");
+  rgb(1,1,0);
+  gfx_printf("Hit Rate: %0.0f%%", hit_rate*100);
+  rgb(1,1,1);
+  gfx_printf(", ");
+  rgb(0,1,1);
+  gfx_printf("Error Bound: %0.0f%%", error_bound*100);
+  rgb(1,1,1);
+  gfx_printf(")");
+);
+
+function drawTrainingGraph(graph_left, graph_top, graph_width, graph_height) local(i, graph_x_ratio, pr)
+( 
+  rgb(0.27, 0.27, 0.4); // greyish purple
+  gfx_rect(graph_left, graph_top, graph_width, graph_height);
+
+  gfx_setfont(1, "Arial", 12);
+  graph_x_ratio = graph_width/(max_graph-1);
+  i=0;
+  rgb(0.67, 0.67, 0.67); 
+  loop(max_graph/10,
+    (i%60 == 0) ?
+      (gfx_line(graph_left + i*graph_x_ratio, graph_top, graph_left + i*graph_x_ratio, graph_top+graph_height);
+      sprintf(str, "%2d:00", 1+i/60);
+      printBottomLeft(graph_left + (i+60)*graph_x_ratio-1, graph_top + graph_height, str))
+    : verticalDashedLine(graph_left + i*graph_x_ratio, graph_top, graph_top+graph_height, 4, 5);
+    i += 10);
+  gfx_line(graph_left + width, graph_top, graph_left + width, graph_top + graph_height);
+
+  // Draw verical time line
+  rgb(1, 1, 1);
+  gfx_line(graph_left + graph_idx*graph_x_ratio, graph_top, graph_left + graph_idx*graph_x_ratio, graph_top + graph_height);
+
+  // hit rate
+  i=0;
+  rgb(1,1,0);
+  gfx_x = graph_left;
+  gfx_y = graph_top + graph_height*(1 - v_graph_hit_rate[0]);
+  loop(max_graph,
+    hr = max(0, min(1, 1 - v_graph_hit_rate[i]));
+    gfx_lineto(graph_left + i*graph_x_ratio, graph_top + graph_height*hr);
+    i+=1);
+
+  // error_bound
+  i=0;
+  rgb(0,1,1);
+  gfx_x = graph_left;
+  gfx_y = graph_top + graph_height*(1 - v_graph_error_bound[0]);
+  loop(max_graph,
+    pr = max(0, min(1, 1 - v_graph_error_bound[i]));
+    gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*pr);
+    i+=1);
+
+  drawFrame(xmargin-1, graph_top-1, width+2, graph_height+2);
 );
 
 xmargin = 4;
@@ -916,66 +977,9 @@ num_lanes > 1 ? (DrawGrid(1, xmargin, y, width, grid_height-grid_margin); y+=gri
 num_lanes > 2 ? (DrawGrid(2, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
 num_lanes > 3 ? (DrawGrid(3, xmargin, y, width, grid_height-grid_margin); y+=grid_height);
 
-// Draw Training graph
-//-------------------
-graph_top = y + 20;
-graph_height = max(80, gfx_h - footer_margin - graph_top);
-
-gfx_x = xmargin;
-gfx_y = graph_top-20;
-gfx_setfont(1, "Arial", 15);
-rgb(1,1,1);
-gfx_printf("Training Graph (");
-rgb(1,1,0);
-gfx_printf("Hit Rate: %0.0f%%", hit_rate*100);
-rgb(1,1,1);
-gfx_printf(", ");
-rgb(0,1,1);
-gfx_printf("Error Bound: %0.0f%%", error_bound*100);
-rgb(1,1,1);
-gfx_printf(")");
-
-rgb(0.27, 0.27, 0.4); // greyish purple
-gfx_rect(xmargin, graph_top, width, graph_height);
-
-gfx_setfont(1, "Arial", 12);
-graph_x_ratio = width/(max_graph-1);
-i=0;
-rgb(0.67, 0.67, 0.67); 
-loop(max_graph/10,
-  (i%60 == 0) ?
-    (gfx_line(xmargin + i*graph_x_ratio, graph_top, xmargin + i*graph_x_ratio, graph_top+graph_height);
-    sprintf(str, "%2d:00", 1+i/60);
-    printBottomLeft(xmargin + (i+60)*graph_x_ratio-1, graph_top + graph_height, str))
-  : verticalDashedLine(xmargin + i*graph_x_ratio, graph_top, graph_top+graph_height, 4, 5);
-  i += 10;);
-gfx_line(xmargin + width, graph_top, xmargin + width, graph_top+graph_height);
-
-// Draw verical time line
-rgb(1, 1, 1);
-gfx_line(xmargin + graph_idx*graph_x_ratio, graph_top, xmargin + graph_idx*graph_x_ratio, graph_top + graph_height);
-
-// hit rate
-i=0;
-rgb(1,1,0);
-gfx_x = xmargin;
-gfx_y = graph_top + graph_height*(1 - v_graph_hit_rate[0]);
-loop(max_graph,
-  hr = max(0, min(1, 1 - v_graph_hit_rate[i]));
-  gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*hr);
-  i+=1);
-
-// error_bound
-i=0;
-rgb(0,1,1);
-gfx_x = xmargin;
-gfx_y = graph_top + graph_height*(1 - v_graph_error_bound[0]);
-loop(max_graph,
-  pr = max(0, min(1, 1 - v_graph_error_bound[i]));
-  gfx_lineto(xmargin + i*graph_x_ratio, graph_top + graph_height*pr);
-  i+=1);
-
-drawFrame(xmargin-1, graph_top-1, width+2, graph_height+2);
+drawTrainingGraphTitle(xmargin, y);
+y+=20;
+drawTrainingGraph(xmargin, y, width, max(80, gfx_h - footer_margin - y));
 
 prev_mouse_cap = mouse_cap;
 mouse_wheel = 0;
