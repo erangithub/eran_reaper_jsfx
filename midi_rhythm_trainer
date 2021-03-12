@@ -95,10 +95,12 @@ control_button_in_channel_down = 10;
 control_button_in_min_note = 11;
 control_button_in_max_note = 12;
 
+control_button_training_clear = 13;
+
 hist_idx = 0;
 max_hist = 200;
 max_age = 60;
-max_graph = 15*60;
+max_graph = 10*60;
 graph_start = 0;
 graph_idx = 0;
 hit_memory = 0.85;
@@ -408,7 +410,7 @@ function recordHistory(reltime, hit, lane, note)
 function recordTraining() local(t)
 (
   t = time();
-  (t - graph_start > max_graph) ? (graph_start = t; graph_idx = 0);
+  (t - graph_start > max_graph) ? graph_start = t;
   graph_idx = t - graph_start;
   v_graph_hit_rate[graph_idx] = hit_rate;
   v_graph_error_bound[graph_idx] = error_bound;
@@ -444,7 +446,7 @@ function getLaneOfNote(note, channel) local(i, result)
   result; 
 );
 
-play_state ? (
+(play_state == 1) ? (
   getClick(0) ? playGrid(0);
   getClick(1) && (num_lanes>1) ? playGrid(1);
   getClick(2) && (num_lanes>2) ? playGrid(2);
@@ -455,7 +457,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    noteStatus = msg1 & $xF0;
    channel = msg1 & 0x0F;
    
-   play_state && noteStatus==note_on && msg3!=0 ? (
+   (play_state == 1) && noteStatus==note_on && msg3!=0 ? (
      note = msg2;
      reltime = getRelTime(offset);
      lane = getLaneOfNote(note, channel);
@@ -471,9 +473,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
      enable_recording = 1;
      midisend(offset,msg1,msg2,msg3); // passthrough other events
    );
-  
-   play_state ? recordTraining();
-   
+     
    noteStatus == note_on && msg3!=0 && listen_note_control ? (
      note = msg2;
      learnNote(note);
@@ -481,7 +481,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    );
 );
 
-prev_play_state = play_state;
+(play_state == 1) ? recordTraining();
 
 @gfx
 #value_edit = "";
@@ -893,13 +893,25 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   drawFrame(l-1, t-1, w+2, h+2);
 );
 
+function clearTrainingGraph()
+(
+  graph_start=0;
+  graph_idx=0;
+  i=0;
+  while (i<max_graph) (
+    v_graph_error_bound[i] = 0;
+    v_graph_hit_rate[i] = 0;
+    i+=1;
+  );
+);
+
 function drawTrainingGraphTitle(left, top)
 (
   gfx_x = left;
   gfx_y = top;
   gfx_setfont(1, "Arial", 15);
   rgb(1,1,1);
-  gfx_printf("Training Graph (");
+  gfx_printf("10 Minute Training Graph (");
   rgb(1,1,0);
   gfx_printf("Hit Rate: %0.0f%%", hit_rate*100);
   rgb(1,1,1);
@@ -908,6 +920,9 @@ function drawTrainingGraphTitle(left, top)
   gfx_printf("Error Bound: %0.0f%%", error_bound*100);
   rgb(1,1,1);
   gfx_printf(")");
+  
+  drawButton(0, control_button_training_clear, gfx_x+10, top, 34, 14, "clear", 0) && isLButtonRelease() ?
+    clearTrainingGraph();
 );
 
 function drawTrainingGraph(graph_left, graph_top, graph_width, graph_height) local(i, graph_x_ratio, pr)
