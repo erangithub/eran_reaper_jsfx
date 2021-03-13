@@ -15,7 +15,6 @@ desc: MIDI Rhythm Trainer
 //author: Eran Talmor (C) 2021
     
 slider1:4<1,32,1>Beats
-slider2:0<0,1,1,{Manual,Recording}>Rhythm Entry Mode
 slider3:1<1,4,1>Number of Lanes
 slider4:50<1,100,0.1>Error Bound (%)
 slider5:0<0,1,1{Off,On}>Auto Shrink Error Bound
@@ -104,9 +103,6 @@ max_graph = 10*60;
 graph_start = 0;
 graph_idx = 0;
 hit_memory = 0.85;
-enable_recording = 1;
-max_recorded_divs = 1;
-
 prev_select = -1;
 
 v_history_time = 4; 
@@ -117,9 +113,7 @@ v_history_notes = v_history_lane + max_hist;
 v_play_indices = v_history_notes + max_hist;
 v_play_timers = v_play_indices + 4;
 v_play_off_timers = v_play_timers + 4;
-v_rec_indices = v_play_off_timers + 4;
-v_rec = v_rec_indices + 4;
-v_graph_hit_rate = v_rec + 4*max_hist;
+v_graph_hit_rate = v_play_off_timers + 4*max_hist;
 v_graph_error_bound = v_graph_hit_rate + max_graph;
 
 function resetPlay() local(i)
@@ -141,13 +135,6 @@ function getRelTime(offset) local(p)
   p - floor(p);
 );
 
-function recordRecording(reltime, lane) local(i)
-(
-  v_rec[lane*max_hist + v_rec_indices[lane]] = reltime;
-  v_rec_indices[lane] += 1;
-  max_recorded_divs = max(max_recorded_divs, v_rec_indices[lane]);
-);
-
 // Getters and Setters
 function getSliderIdx(lane, offset)
 (
@@ -156,13 +143,14 @@ function getSliderIdx(lane, offset)
 
 function getSlider(lane, offset) local(idx)
 ( 
-  (entry_mode == 1) ? 0 : slider(getSliderIdx(lane, offset))
+  slider(getSliderIdx(lane, offset))
 );
 
 function setSlider(lane, offset, value, min_val, max_val, reset_play) local(idx)
 ( 
   idx = getSliderIdx(lane, offset);
-  ((entry_mode == 1) ? 0 : (slider(idx) = min(max_val, max(min_val, value)); slider_automate(2 ^ idx)));
+  slider(idx) = min(max_val, max(min_val, value));
+  slider_automate(2 ^ idx);
   reset_play ? resetPlay();
 );
 
@@ -284,16 +272,9 @@ function setInputMaxNote(lane, value) local(idx)
 );
 
 //
-
-function isRecording()
-(
-  play_state && enable_recording && (entry_mode == 1) && ((beat_position) < beats)
-);
-
 function getGridRaw(lane, divs, i)
 (
-  (entry_mode == 1) ? v_rec[max_hist*lane + i]
-  : (i + (i&1 ? getSwing(lane)) + getPhase(lane))/divs;
+  (i + (i&1 ? getSwing(lane)) + getPhase(lane))/divs;
 );
 
 function getGrid(lane, divs, i) local(r)
@@ -304,7 +285,7 @@ function getGrid(lane, divs, i) local(r)
 
 function getErrorRange()
 (
-  (entry_mode == 1) ? error_bound/max_recorded_divs : error_bound/max_divs;
+  error_bound/max_divs;
 );
 
 function getEarly(lane, divs, i)
@@ -353,7 +334,6 @@ function controlId(lane, control)
 @slider
 
 beats = slider1;
-entry_mode = slider2;
 num_lanes = slider3;
 
 error_bound = slider4/100;
@@ -393,8 +373,6 @@ function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid)
 
 function recordHistory(reltime, hit, lane, note)
 (
-  enable_recording = 0;
-  rec_idx = 0;
   v_history_time[hist_idx] = time_precise();
   v_history_rel_time[hist_idx] = reltime;
   v_history_hits[hist_idx] = hit;
@@ -465,12 +443,10 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
        midisend(offset, msg1, msg2, msg3)
      : (
        hit = isHit(reltime, lane);
-       isrec = isRecording();
-       (isrec || (hit == 0)) ? (midisend(offset,msg1,note,msg3));
-       isrec ? recordRecording(reltime, lane) : recordHistory(reltime, hit, lane, note)
+       hit == 0 ? midisend(offset,msg1,note,msg3);
+       recordHistory(reltime, hit, lane, note)
      )
    ) : (
-     enable_recording = 1;
      midisend(offset,msg1,msg2,msg3); // passthrough other events
    );
      
@@ -788,23 +764,21 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   toolbar_height = 20;
  
   rgb(0.27, 0.27, 0.27);
-  gfx_rect(l, t, isRecording() ? w * getRelTime() : w, h);
+  gfx_rect(l, t, w, h);
 
   // Draw "grid" area
   divs = getDivs(lane);
     
-  !isRecording() ? (
-    // Draw green areas
-    rgb(0, 0.4, 0);
-    i=-1;
-    loop(divs+2,
-      isGridEnabled(lane, i) ? (
-        low = l+getEarly(lane, divs, i)*w;
-        high = l+getLate(lane, divs, i)*w+1;
-        gfx_rect(low, t, high-low, h);
-      );
-      i+=1;
+  // Draw green areas
+  rgb(0, 0.4, 0);
+  i=-1;
+  loop(divs+2,
+    isGridEnabled(lane, i) ? (
+      low = l+getEarly(lane, divs, i)*w;
+      high = l+getLate(lane, divs, i)*w+1;
+      gfx_rect(low, t, high-low, h);
     );
+    i+=1;
   );
   
   // Draw dashed rhythm lines
@@ -881,8 +855,6 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   drawToolBar(lane, l+w-2, t+h-2, toolbar_height);
   
   rgb(1,0,0);
-  gfx_setfont(1, "Arial", 48);
-  isRecording() ? (printCenter(w/2, h/2, "RECORDING"));
   gfx_setfont(0);  
  
   dragPhase(lane,focus_control,divs, l, t, w, h);
