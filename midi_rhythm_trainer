@@ -18,7 +18,6 @@ slider1:4<1,32,1>Beats
 slider3:1<1,4,1>Number of Lanes
 slider4:50<1,100,0.1>Error Bound (%)
 slider5:0<0,1,1{Off,On}>Auto Shrink Error Bound
-slider6:0<0,4,1{Circles,Note Names,Note Numbers}>Event Drawing Style
 
 // Hidden sliders per lane
 slider20:8<1,32,1>-Divisions1
@@ -338,7 +337,6 @@ num_lanes = slider3;
 
 error_bound = slider4/100;
 auto_shrink = slider5;
-event_style = slider6;
 
 updateMaxDivs();
 resetPlay();
@@ -528,17 +526,6 @@ function printValueEdit(x,y) local(w,h, margin)
   );
 );
 
-
-function printCenterUnderline(x,y,str)
-(
-  gfx_measurestr(str,w,h);
-  gfx_x = x-w/2;
-  gfx_y = y;
-  gfx_printf(str);
-  gfx_line(x-w/2,y+h,x+w/2,y+h);
-  gfx_line(x,y+h,x,y+h+2);
-);
-
 function printBottomLeft(x,y,str) local(w,h)
 (
   gfx_measurestr(str,w,h);
@@ -567,9 +554,8 @@ function noteName(note) local(names,sharps,nm,sh,str)
 
 function drawEvent(x, y, note, is_hit) local(str)
 (
-  (event_style == 0) ? (is_hit ? gfx_circle(x, y, 6, 1, 1) : (gfx_circle(x, y, 6, 0,1); gfx_circle(x, y, 5, 0,1)))
-: (event_style == 1) ? printCenterUnderline(x, y, noteName(note))  
-: (event_style == 2) ? (sprintf(str, "%d", note);  printCenterUnderline(x, y, str));
+  is_hit ? gfx_circle(x, y, 6, 1, 1) : (gfx_circle(x, y, 6, 0,1);
+  gfx_circle(x, y, 5, 0,1));
 );
 
 function isMouseInRect(l,t,w,h)
