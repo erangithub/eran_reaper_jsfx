@@ -552,10 +552,17 @@ function noteName(note) local(names,sharps,nm,sh,str)
   str;
 );
 
-function drawEvent(x, y, note, is_hit) local(str)
+
+fresh_event_thresh = 2;
+function drawEvent(x, y, note, age) local(str)
 (
-  is_hit ? gfx_circle(x, y, 6, 1, 1) : (gfx_circle(x, y, 6, 0,1);
-  gfx_circle(x, y, 5, 0,1));
+  //is_hit ? gfx_circle(x, y, 6, 1,0) : (gfx_circle(x, y, 6, 0, 0);
+  gfx_circle(x, y, 4, 1, 0);
+  
+  (age < fresh_event_thresh) ? (
+    gfx_a = ((fresh_event_thresh-age)/fresh_event_thresh);
+    gfx_circle(x, y, 7, 0, 0);
+  )
 );
 
 function isMouseInRect(l,t,w,h)
@@ -749,7 +756,7 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   focus_control = 0;
   toolbar_height = 20;
  
-  rgb(0.27, 0.27, 0.27);
+  rgb(0.2, 0.2, 0.2);
   gfx_rect(l, t, w, h);
 
   // Draw "grid" area
@@ -825,7 +832,7 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
         x = w * v_history_rel_time[i];
         y = age*20;
         gfx_a = 1 - sqrt(y/h);
-        y < h ? (drawEvent(l+x,t+y, v_history_notes[i], (hit == 0)));
+        y < h ? (drawEvent(l+x,t+y, v_history_notes[i], age));
         age == max_age ? (v_history_time[i] = 0);
       );
       i += 1;
