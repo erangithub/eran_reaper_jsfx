@@ -15,70 +15,75 @@ desc: MIDI Rhythm Trainer
 //author: Eran Talmor (C) 2021
     
 slider1:4<1,32,1>Beats
-slider3:0<0,3,1{1,2,3,4}>Number of Lanes
-slider4:50<1,100,0.1>Error Bound (%)
-slider5:0<0,1,1{Off,On}>Auto Shrink Error Bound
+slider2:0<0,3,1{1,2,3,4}>Number of Lanes
+slider3:50<1,100,0.1>Error Bound (%)
+slider4:0<0,1,1{Off,On}>Auto Shrink Error Bound
 
 // Hidden sliders per lane
-slider20:8<1,32,1>-Divisions1
-slider21:0<-0.5,0.5,0.01>-Swing1
-slider22:0<0,1,0.01>-Phase1
-slider23:0<0,1,1>-Click1
-slider24:60<0,127,1>-ClickNote1
-slider25:60<0,127,1>-ClickVel1
-slider26:-1<-2147483648,2147483647,1>-Mask1
-slider27:0<1,16,1>-InputChannel1
-slider28:0<0,127,1>-InputMinNote1
-slider29:127<0,127,1>-InputMaxNote1
+slider13:8<1,32,1>-Divisions1
+slider14:0<-0.5,0.5,0.01>-Swing1
+slider15:0<0,1,0.01>-Phase1
+slider16:0<0,1,1>-Click1
+slider17:60<0,127,1>-ClickNote1
+slider18:1<1,16,1>-ClickChannel1
+slider19:60<0,127,1>-ClickVel1
+slider20:-1<-2147483648,2147483647,1>-Mask1
+slider21:0<1,16,1>-InputChannel1
+slider22:0<0,127,1>-InputMinNote1
+slider23:127<0,127,1>-InputMaxNote1
 
-slider30:8<1,32,1>-Divisions2
-slider31:0<-0.5,0.5,0.01>-Swing2
-slider32:0<0,1,0.01>-Phase2
-slider33:0<0,1,1>-Click2
-slider34:62<0,127,1>-ClickNote2
-slider35:60<0,127,1>-ClickVel2
-slider36:-1<-2147483648,2147483647,1>-Mask2
-slider37:0<0,16,1>-InputChannel2
-slider38:0<0,127,1>-InputMinNote2
-slider39:127<0,127,1>-InputMaxNote2
+slider26:8<1,32,1>-Divisions2
+slider27:0<-0.5,0.5,0.01>-Swing2
+slider28:0<0,1,0.01>-Phase2
+slider29:0<0,1,1>-Click2
+slider30:62<0,127,1>-ClickNote2
+slider31:1<1,16,1>-ClickChannel2
+slider32:60<0,127,1>-ClickVel2
+slider33:-1<-2147483648,2147483647,1>-Mask2
+slider34:0<0,16,1>-InputChannel2
+slider35:0<0,127,1>-InputMinNote2
+slider36:127<0,127,1>-InputMaxNote2
 
-slider40:8<1,32,1>-Divisions3
-slider41:0<-0.5,0.5,0.01>-Swing3
-slider42:0<0,1,0.01>-Phase3
-slider43:0<0,1,1>-Click3
-slider44:64<0,127,1>-ClickNote3
+slider39:8<1,32,1>-Divisions3
+slider40:0<-0.5,0.5,0.01>-Swing3
+slider41:0<0,1,0.01>-Phase3
+slider42:0<0,1,1>-Click3
+slider43:64<0,127,1>-ClickNote3
+slider44:1<1,16,1>-ClickChannel3
 slider45:60<0,127,1>-ClickVel3
 slider46:-1<-2147483648,2147483647,1>-Mask3
 slider47:0<0,16,1>-InputChannel3
 slider48:0<0,127,1>-InputMinNote3
 slider49:127<0,127,1>-InputMaxNote3
 
-slider50:8<1,32,1>-Divisions4
-slider51:0<-0.5,0.5,0.01>-Swing4
-slider52:0<0,1,0.01>-Phase4
-slider53:0<0,1,1>-Click4
-slider54:65<0,127,1>-ClickNote4
-slider55:60<0,127,1>-ClickVel4
-slider56:-1<-2147483648,2147483647,1>-Mask4
-slider57:0<0,16,1>-InputChannel4
-slider58:0<0,127,1>-InputMinNote4
-slider59:127<0,127,1>-InputMaxNote4
+slider52:8<1,32,1>-Divisions4
+slider53:0<-0.5,0.5,0.01>-Swing4
+slider54:0<0,1,0.01>-Phase4
+slider55:0<0,1,1>-Click4
+slider56:65<0,127,1>-ClickNote4
+slider57:1<1,16,1>-ClickChannel4
+slider58:60<0,127,1>-ClickVel4
+slider59:-1<-2147483648,2147483647,1>-Mask4
+slider60:0<0,16,1>-InputChannel4
+slider61:0<0,127,1>-InputMinNote4
+slider62:127<0,127,1>-InputMaxNote4
 
 @init
 note_on = $x90;
 
-sliders_per_lane = 10;
-first_lane_slider = 20;
+sliders_per_lane = 13;
+first_lane_slider = 13;
 slider_offset_divs = 0;
 slider_offset_swing = 1;
 slider_offset_phase = 2;
 slider_offset_click = 3;
 slider_offset_click_note = 4;
-slider_offset_click_vel = 5;
-slider_offset_mask = 6;
-slider_offset_in_channel = 7;
-slider_offset_in_min_note = 8;
-slider_offset_in_max_note = 9;
+slider_offset_click_channel = 5;
+slider_offset_click_vel = 6;
+slider_offset_mask = 7;
+slider_offset_in_channel = 8;
+slider_offset_in_min_note = 9;
+slider_offset_in_max_note = 10;
 
 control_phase = 1;
 control_swing = 2;
@@ -88,12 +93,14 @@ control_button_click = 5;
 control_button_vel_up = 6;
 control_button_vel_down = 7;
 control_button_click_note = 8;
-control_button_in_channel_up = 9;
-control_button_in_channel_down = 10;
-control_button_in_min_note = 11;
-control_button_in_max_note = 12;
+control_button_click_channel_down = 9;
+control_button_click_channel_up = 10;
+control_button_in_channel_up = 11;
+control_button_in_channel_down = 12;
+control_button_in_min_note = 13;
+control_button_in_max_note = 14;
 
-control_button_training_clear = 13;
+control_button_training_clear = 15;
 
 hist_idx = 0;
 max_hist = 200;
@@ -227,6 +234,16 @@ function setClickVel(lane, value) local(idx)
   setSlider(lane, slider_offset_click_vel, value, 0, 127, 0);
 );
 
+function getClickChannel(lane)
+(
+  getSlider(lane, slider_offset_click_channel);
+);
+
+function setClickChannel(lane, value) local(idx)
+(
+  setSlider(lane, slider_offset_click_channel, value, 1, 16, 1);
+);
+
 function isGridEnabled(lane, idx) local(d,idx,mask)
 (
   d = getDivs(lane);
@@ -309,7 +326,7 @@ function adjustErrorBound(hit_rate) local(level)
   (hit_rate > 0.9) ? 
     (level = (error_bound < 0.2 ? 0.001 : error_bound <= 0.3 ? 0.002 : error_bound <= 0.4 ?  0.005 : 0.01);
     (error_bound = max(0, error_bound - level)));
-  slider4 = error_bound*100;
+  slider3 = error_bound*100;
 );
 
 // returns: 0 == hit, -1 == early, 1 == late
@@ -340,27 +357,27 @@ function controlId(lane, control)
 @slider
 
 beats = slider1;
-num_lanes = slider3+1;
-
-error_bound = slider4/100;
-auto_shrink = slider5;
+num_lanes = slider2+1;
+error_bound = slider3/100;
+auto_shrink = slider4;
 
 updateMaxDivs();
 resetPlay();
 
 @block
 
-function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid)
+function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel)
 (
+  channel = getClickChannel(lane)-1;
   (v_play_off_timers[lane] < samplesblock) ? (
-    midisend(max(0, v_play_off_timers[lane]), $x90, getClickNote(lane), 0);
+    midisend(max(0, v_play_off_timers[lane]), $x90 + channel, getClickNote(lane), 0);
     v_play_off_timers[lane] = 1000000;
   );
   
   // find next "grid line" such that timer will be >= sampleblock
   (v_play_timers[lane] < samplesblock) ? (
     isGridEnabled(lane, v_play_indices[lane]) && v_play_timers[lane] >= 0 ? 
-      midisend(max(0, v_play_timers[lane]), $x90, getClickNote(lane), getClickVel(lane));
+      midisend(max(0, v_play_timers[lane]), $x90 + channel, getClickNote(lane), getClickVel(lane));
     sp_per_beat = srate * 60 / tempo;
     sp_now = floor(0.001 + beat_position * sp_per_beat);
     divs = getDivs(lane);
@@ -710,20 +727,23 @@ function drawToolBar(lane, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, f7
     f1 = drawButton(lane, control_button_div_up, button_width, h, "+", 0);
     
     drawText(0, h, "Click:");
-    f5 = drawButton(lane, control_button_click, button_width*1.2, h, getClick(lane)? "on" : "off", getClick(lane));
+    f5 = drawButton(lane, control_button_click, button_width*1.5, h, getClick(lane)? "ON" : "OFF", getClick(lane));
     f6 = drawButton(lane, control_button_click_note, button_width*1.5, h, noteName(click_note), 
                     (listen_note_control == control_button_click_note_id));
-    f4 = drawButton(lane, control_button_vel_down, button_width, h,  "v-", 0);
-    f3 = drawButton(lane, control_button_vel_up, button_width, h, "v+", 0);
+    f4 = drawButton(lane, control_button_vel_down, button_width, h,  "V-", 0);
+    f3 = drawButton(lane, control_button_vel_up, button_width, h, "V+", 0);
+    f11 = drawButton(lane, control_button_in_channel_down, button_width, h, "CH-", 0);
+    f12 = drawButton(lane, control_button_in_channel_up, button_width, h, "CH+", 0);
     
     drawText(0, h, "Input Filter:");    
-    f8 = drawButton(lane, control_button_in_channel_down, button_width, h, "CH-", 0);
-    f7 = drawButton(lane, control_button_in_channel_up, button_width, h, "CH+", 0);
     f10 = drawButton(lane, control_button_in_min_note, button_width*1.5, h, noteName(min_note),
                     (listen_note_control == control_button_in_min_note_id));
     drawText(0, h, "->");
     f9 = drawButton(lane, control_button_in_max_note, button_width*1.5, h, noteName(max_note),
                     (listen_note_control == control_button_in_max_note_id));                 
+    f8 = drawButton(lane, control_button_in_channel_down, button_width, h, "CH-", 0);
+    f7 = drawButton(lane, control_button_in_channel_up, button_width, h, "CH+", 0);
+
     release && f1 ? setDivs(lane, getDivs(lane)+1); 
     release && f2 ? setDivs(lane, getDivs(lane)-1); 
     release && f3 ? setClickVel(lane, floor(getClickVel(lane)/4)*4+4); 
@@ -734,6 +754,8 @@ function drawToolBar(lane, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, f7
     release && f8 ? setInputChannel(lane, getInputChannel(lane)-1);
     release && f9 ? toggleListen(control_button_in_max_note_id);
     release && f10 ? toggleListen(control_button_in_min_note_id);
+    release && f11 ? setClickChannel(lane, getClickChannel(lane)-1);
+    release && f12 ? setClickChannel(lane, getClickChannel(lane)+1);
         
     f1 || f2 ? sprintf(#value_edit, "Divisions: %d", getDivs(lane));
     f3 || f4 ? sprintf(#value_edit, "Click Velocity: %d", getClickVel(lane));
@@ -745,6 +767,8 @@ function drawToolBar(lane, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, f7
       in_chan ? sprintf(#value_edit, "Input Channel: %d", in_chan)
               : sprintf(#value_edit, "Input Channel: ALL");
     );
+    f11 || f12 ? sprintf(#value_edit, "Click Channel: %d", getClickChannel(lane));
+    
     (listen_note_control == control_button_in_max_note_id) ? sprintf(#value_edit, "Input Max Note: LISTENING") 
     : f9 ? sprintf(#value_edit, "Input Max Note: %s (%d)", noteName(max_note), max_note);
     (listen_note_control == control_button_in_min_note_id) ? sprintf(#value_edit, "Input Min Note: LISTENING") 
@@ -756,6 +780,7 @@ function drawToolBar(lane, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, f7
       : (f7 || f8) ? setInputChannel(lane, getInputChannel(lane)+mouse_wheel_dir)
       : f9 && (listen_note_control != control_button_in_max_note_id) ? setInputMaxNote(lane, max_note+mouse_wheel_dir)
       : f10 && (listen_note_control != control_button_in_min_note_id) ? setInputMinNote(lane, min_note+mouse_wheel_dir)
+      : (f11 || f12) ? setClickChannel(lane, getClickChannel(lane)+mouse_wheel_dir)
     );
   )
 );
