@@ -905,8 +905,9 @@ function drawTrainingGraphTitle(left, top)
   rgb(1,1,1);
   gfx_printf(")");
   
-  //drawButton(0, control_button_training_clear, gfx_x+10, top, 34, 14, "clear", 0) && isLButtonRelease() ?
-  //  clearTrainingGraph();
+  gfx_x += 20;
+  drawButton(0, control_button_training_clear, 0, 16, "clear", 0) && isLButtonRelease() ?
+    clearTrainingGraph();
 );
 
 function drawTrainingGraph(graph_left, graph_top, graph_width, graph_height) local(i, graph_x_ratio, pr)
