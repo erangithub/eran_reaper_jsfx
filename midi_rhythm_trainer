@@ -589,7 +589,6 @@ function noteName(note) local(names,sharps,nm,sh,str)
 fresh_event_thresh = 2;
 function drawEvent(x, y, note, age) local(str)
 (
-  //is_hit ? gfx_circle(x, y, 6, 1,0) : (gfx_circle(x, y, 6, 0, 0);
   gfx_circle(x, y, 4, 1, 0);
   
   (age < fresh_event_thresh) ? (
