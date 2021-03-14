@@ -15,7 +15,7 @@ desc: MIDI Rhythm Trainer
 //author: Eran Talmor (C) 2021
     
 slider1:4<1,32,1>Beats
-slider3:1<1,4,1>Number of Lanes
+slider3:0<0,3,1{1,2,3,4}>Number of Lanes
 slider4:50<1,100,0.1>Error Bound (%)
 slider5:0<0,1,1{Off,On}>Auto Shrink Error Bound
 
@@ -340,7 +340,7 @@ function controlId(lane, control)
 @slider
 
 beats = slider1;
-num_lanes = slider3;
+num_lanes = slider3+1;
 
 error_bound = slider4/100;
 auto_shrink = slider5;
