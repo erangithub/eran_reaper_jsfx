@@ -109,7 +109,8 @@ v_history_rel_time = v_history_time + max_hist;
 v_history_hits = v_history_rel_time + max_hist;
 v_history_lane = v_history_hits + max_hist;
 v_history_notes = v_history_lane + max_hist;
-v_play_indices = v_history_notes + max_hist;
+v_midi_monitor_last_hit = v_history_notes + max_hist;
+v_play_indices = v_midi_monitor_last_hit + 4;
 v_play_timers = v_play_indices + 4;
 v_play_off_timers = v_play_timers + 4;
 v_graph_hit_rate = v_play_off_timers + 4*max_hist;
@@ -171,6 +172,7 @@ function updateMaxDivs() local(i)
 
 function setDivs(lane, value)
 (
+  value = floor(value);
   setSlider(lane, slider_offset_divs, value, 1, 32, 1);
   updateMaxDivs();
 );
@@ -273,7 +275,7 @@ function setInputMaxNote(lane, value) local(idx)
 //
 function getGridRaw(lane, divs, i)
 (
-  (i + (i&1 ? getSwing(lane)) + getPhase(lane))/divs;
+  (i + (i&1 ? getSwing(lane) : 0) + getPhase(lane))/divs;
 );
 
 function getGrid(lane, divs, i) local(r)
@@ -295,6 +297,11 @@ function getEarly(lane, divs, i)
 function getLate(lane, divs, i)
 (
   min(1, getGrid(lane, divs, i) + getErrorRange()/2);
+);
+
+function getMidiMonitorAge(lane)
+(
+  time_precise() - v_midi_monitor_last_hit[lane];
 );
 
 function adjustErrorBound(hit_rate) local(level)
@@ -392,6 +399,11 @@ function recordTraining() local(t)
   v_graph_error_bound[graph_idx] = error_bound;
 );
 
+function recordMidiMonitor(lane)
+(
+  v_midi_monitor_last_hit[lane] = time_precise();
+);
+
 function learnNote(note) local(i) 
 (
   i = 0;
@@ -432,26 +444,30 @@ function getLaneOfNote(note, channel) local(i, result)
 while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
    noteStatus = msg1 & $xF0;
    channel = msg1 & 0x0F;
+   is_note_on = noteStatus==note_on && msg3!=0;
    
-   (play_state == 1) && noteStatus==note_on && msg3!=0 ? (
+   is_note_on ? ( 
      note = msg2;
-     reltime = getRelTime(offset);
      lane = getLaneOfNote(note, channel);
-     lane < 0 ?
+     lane >= 0 ? recordMidiMonitor(lane);
+   );
+   
+   (play_state == 1) && is_note_on ? (
+     listen_note_control ? (
+       learnNote(note);
+       midisend(offset, msg1, msg2, msg3)
+     )
+     : lane < 0 ?
        midisend(offset, msg1, msg2, msg3)
      : (
+       reltime = getRelTime(offset);
        hit = isHit(reltime, lane);
        hit == 0 ? midisend(offset,msg1,note,msg3);
        recordHistory(reltime, hit, lane, note)
      )
    ) : (
+     is_note_on && listen_note_control ? learnNote(note);
      midisend(offset,msg1,msg2,msg3); // passthrough other events
-   );
-     
-   noteStatus == note_on && msg3!=0 && listen_note_control ? (
-     note = msg2;
-     learnNote(note);
-     midisend(offset,msg1,msg2,msg3);
    );
 );
 
@@ -751,6 +767,16 @@ function drawToolBar(lane, r, b, h) local(release, f1, f2, f3, f4, f5, f6, f7, f
   )
 );
 
+function drawMidiMonitor(lane, l,t,w,h) local(age)
+(
+  age = getMidiMonitorAge(lane);
+  gfx_a = 1-min(age,1);
+  rgb(1,1,0);
+  gfx_rect(l,t,w,h);
+  gfx_a = 0.2;
+  emptyRect(l,t,w,h);
+);
+
 function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
 (  
   focus_control = 0;
@@ -845,11 +871,9 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
     gfx_line(x, t, x, t+h);
   );  
   
+  drawMidiMonitor(lane, l+4, t+h-12, 8, 8);  
   drawToolBar(lane, l+w-2, t+h-2, toolbar_height);
   
-  rgb(1,0,0);
-  gfx_setfont(0);  
- 
   dragPhase(lane,focus_control,divs, l, t, w, h);
   dragSwing(lane,focus_control,divs, l, t, w, h);
   
