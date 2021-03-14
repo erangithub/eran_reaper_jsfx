@@ -632,36 +632,45 @@ function emptyRect(l,t,w,h)
 (
   gfx_x = l;
   gfx_y = t;
-  gfx_lineto(l+w,t);
-  gfx_lineto(l+w,t+h);
-  gfx_lineto(l,t+h);
+  gfx_lineto(l+w-1,t);
+  gfx_lineto(l+w-1,t+h-1);
+  gfx_lineto(l,t+h-1);
   gfx_lineto(l,t);
 );
 
-function drawText(l,t,w,h,str)
+function drawText(w,h,str) local(strw, strh)
 (
   rgb(0.7, 0.7, 0.7);
+  l = gfx_x;
+  t = gfx_y;
   gfx_a = 1;
+  gfx_measurestr(str, strw, strh);
+  w=max(w,strw+8);
   printCenter(l+w/2, t+h/2, str);
+  gfx_x = l + w;
+  gfx_y = t;
 );
 
-function drawButton(lane, id, l, t, w, h, str, state) local(focus, button_id, focus_brightness, state_brightness, press_brighness, delta)
+function drawButton(lane, id, w, h, str, state) local(strw, strh, focus, button_id, focus_brightness, state_brightness, press_brighness, delta)
 (
+  l = gfx_x;
+  t = gfx_y;
+  gfx_measurestr(str, strw, strh);
+  w=max(w,strw+8);
   button_id = controlId(lane, id);
   !active_control && isMouseInRect(l,t,w,h) && mouse_cap & 1 ? active_control = button_id;
   focus = (!active_control || active_control == button_id) && isMouseInRect(l,t,w,h);
   focus_brightness = 0.1 * focus;
-  state_brightness = 0.6 * state;
+  state_brightness = 0.1 * state;
   press_brightness = 0.2 * focus * (mouse_cap & 1);
   delta = focus_brightness - press_brightness;
-  rgb(delta+state_brightness, delta+state_brightness, delta);
-  gfx_a = 0.45;
-  gfx_rect(l,t,w,h);
-  rgb(0.5+delta, 0.5+delta, 0.5+delta);
-  emptyRect(l,t,w,h);
+  rgb(0.2 + delta, 0.2 + delta+state_brightness, 0.2 + delta+state_brightness);
+  gfx_rect(l+1,t+1,w-2,h-2);
   gfx_a = 1;  
   rgb(0.7+delta, 0.7+delta, 0.7+delta);
   printCenter(l+w/2, t+h/2, str);
+  gfx_x = l+w;
+  gfx_y = t;
   focus;
 );
 
@@ -670,15 +679,22 @@ function toggleListen(control)
   listen_note_control = listen_note_control == control ? 0 : control;
 );
 
-function drawToolBar(lane, r, b, h) local(release, f1, f2, f3, f4, f5, f6, f7, f8, button_left, button_top, click_note)
+function drawToolBar(lane, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, f7, f8, button_left, button_top, click_note)
 (
   gfx_setfont(1, "Arial", 14);
   release = isLButtonRelease();
   mouse_wheel_dir = mouse_wheel / 120;
-  button_left = r-h;
-  button_top = b-h;
-  f0 = drawButton(lane, control_button_expand, button_left, button_top, h, h, expand_toolbar ? ">>" : "<<", 0);
+  expand_toolbar ? (
+    rgb(0,0,0);
+    gfx_a = 0.6;
+    gfx_rect(l-1,t-1,w+2,h+2);
+    gfx_a = 1;
+  ) : gfx_a = 0.6;
+  gfx_x = l+1;
+  gfx_y = t;
+  f0 = drawButton(lane, control_button_expand, h, h, expand_toolbar ? "<<" : ">>", 0);
   release && f0 ? expand_toolbar = !expand_toolbar;
+  
   
   expand_toolbar ? (
     click_note = getClickNote(lane);
@@ -689,48 +705,25 @@ function drawToolBar(lane, r, b, h) local(release, f1, f2, f3, f4, f5, f6, f7, f
     control_button_in_min_note_id = controlId(lane, control_button_in_min_note);
         
     button_width = h;
-    button_left -= button_width + 2;
-    f1 = drawButton(lane, control_button_div_up, button_left, button_top, button_width, h, "+", 0);
-    button_left -= button_width + 2;
-    f2 = drawButton(lane, control_button_div_down, button_left, button_top, button_width, h, "-", 0);
-    button_left -= button_width + 2;
-    drawText(button_left, button_top, button_width, h, " divs:");
+    drawText(0, h, "Divisions:");
+    f2 = drawButton(lane, control_button_div_down, button_width, h, "-", 0);
+    f1 = drawButton(lane, control_button_div_up, button_width, h, "+", 0);
     
-    button_width = h;
-    button_left -= button_width + 2;
-    f5 = drawButton(lane, control_button_click, button_left, button_top, button_width, h, getClick(lane)? "on" : "off", getClick(lane));
-    button_width = h*1.5;
-    button_left -= button_width + 2;
-    f6 = drawButton(lane, control_button_click_note, button_left, button_top, button_width, h, noteName(click_note), 
+    drawText(0, h, "Click:");
+    f5 = drawButton(lane, control_button_click, button_width*1.2, h, getClick(lane)? "on" : "off", getClick(lane));
+    f6 = drawButton(lane, control_button_click_note, button_width*1.5, h, noteName(click_note), 
                     (listen_note_control == control_button_click_note_id));
-    button_width = h;
-    button_left -= button_width + 2;
-    f3 = drawButton(lane, control_button_vel_up, button_left, button_top, button_width, h, "v+", 0);
-    button_left -= button_width + 2;
-    f4 = drawButton(lane, control_button_vel_down, button_left, button_top, button_width, h,  "v-", 0);
-    button_width = h*1.2;
-    button_left -= button_width+2;
-    drawText(button_left, button_top, button_width, h, "  click:");
+    f4 = drawButton(lane, control_button_vel_down, button_width, h,  "v-", 0);
+    f3 = drawButton(lane, control_button_vel_up, button_width, h, "v+", 0);
     
-    button_width = h;
-    button_left -= button_width + 2;
-    f7 = drawButton(lane, control_button_in_channel_up, button_left, button_top, button_width, h, "CH+", 0);
-    button_left -= button_width + 2;
-    f8 = drawButton(lane, control_button_in_channel_down, button_left, button_top, button_width, h, "CH-", 0);
-    
-    button_width = h*1.5;
-    button_left -= button_width + 2;
-    f9 = drawButton(lane, control_button_in_max_note, button_left, button_top, button_width, h, noteName(max_note),
-                    (listen_note_control == control_button_in_max_note_id));
-    button_width = h/2;
-    button_left -= button_width + 2;
-    drawText(button_left, button_top, button_width, h, "->");
-    button_width = h*1.5;
-    button_left -= button_width + 2;
-    f10 = drawButton(lane, control_button_in_min_note, button_left, button_top, button_width, h, noteName(min_note),
+    drawText(0, h, "Input Filter:");    
+    f8 = drawButton(lane, control_button_in_channel_down, button_width, h, "CH-", 0);
+    f7 = drawButton(lane, control_button_in_channel_up, button_width, h, "CH+", 0);
+    f10 = drawButton(lane, control_button_in_min_note, button_width*1.5, h, noteName(min_note),
                     (listen_note_control == control_button_in_min_note_id));
-    button_left -= button_width + 2;
-    drawText(button_left, button_top, button_width, h, "  input:");   
+    drawText(0, h, "->");
+    f9 = drawButton(lane, control_button_in_max_note, button_width*1.5, h, noteName(max_note),
+                    (listen_note_control == control_button_in_max_note_id));                 
     release && f1 ? setDivs(lane, getDivs(lane)+1); 
     release && f2 ? setDivs(lane, getDivs(lane)-1); 
     release && f3 ? setClickVel(lane, floor(getClickVel(lane)/4)*4+4); 
@@ -783,6 +776,7 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
   toolbar_height = 20;
  
   rgb(0.2, 0.2, 0.2);
+  gfx_a = 1;
   gfx_rect(l, t, w, h);
 
   // Draw "grid" area
@@ -871,9 +865,9 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, too
     gfx_line(x, t, x, t+h);
   );  
   
-  drawMidiMonitor(lane, l+6, t+h-12, 8, 8);  
-  drawToolBar(lane, l+w-2, t+h-2, toolbar_height);
-  
+  drawToolBar(lane, l+2,t+h-toolbar_height-1,w-2,20);
+  drawMidiMonitor(lane, l+w-12, t+h-14, 8, 8);  
+    
   dragPhase(lane,focus_control,divs, l, t, w, h);
   dragSwing(lane,focus_control,divs, l, t, w, h);
   
@@ -896,6 +890,7 @@ function clearTrainingGraph()
 
 function drawTrainingGraphTitle(left, top)
 (
+  gfx_a = 1;
   gfx_x = left;
   gfx_y = top;
   gfx_setfont(1, "Arial", 15);
@@ -910,12 +905,13 @@ function drawTrainingGraphTitle(left, top)
   rgb(1,1,1);
   gfx_printf(")");
   
-  drawButton(0, control_button_training_clear, gfx_x+10, top, 34, 14, "clear", 0) && isLButtonRelease() ?
-    clearTrainingGraph();
+  //drawButton(0, control_button_training_clear, gfx_x+10, top, 34, 14, "clear", 0) && isLButtonRelease() ?
+  //  clearTrainingGraph();
 );
 
 function drawTrainingGraph(graph_left, graph_top, graph_width, graph_height) local(i, graph_x_ratio, pr)
 ( 
+  gfx_a = 1;
   rgb(0.27, 0.27, 0.4); // greyish purple
   gfx_rect(graph_left, graph_top, graph_width, graph_height);
 
