@@ -1,3 +1,26 @@
+desc: MIDI Rhythm Trainer
+author: Eran Talmor
+version: 1.01
+link:
+  Youtube tutorial https://youtu.be/cifj6eh_LF0
+  Forum Thread https://forum.cockos.com/showthread.php?t=250891
+about:
+  # MIDI Rhythm Trainer
+
+  A tool for improving your sense of rhythm.
+
+  Key features:
+
+  * Define a rhythmic pattern, and play along to hit the pattern. Only accurate notes will be heard!
+  * Get visual and audio feedback on your performance. 
+  * Error bound: control the level of accuracy you wish to achieve.
+  * Auto error bound shrink: let the tool challenge you as you improve.
+  * Support complex polyrhythms, e.g: 4 beat pattern, divided to 5 in the right hand, 7 in the left hand.
+  * Set up complex splits - up to 4 "lanes",  receiving separate key ranges and input channels.
+  * Set "click' sounds for each lane (like a metronome).
+  * "Swing" and "Phase" parameters.
+  * See you progress on a "10 minute training graph"
+
 /*******************************************************************************
 *  Copyright 2021, Eran Talmor                                                 *
 *  This program is free software: you can redistribute it and/or modify        *
@@ -11,9 +34,6 @@
 *  GNU General Public License (http://www.gnu.org/licenses/)for more details.  *
 *******************************************************************************/
 
-desc: MIDI Rhythm Trainer
-//author: Eran Talmor (C) 2021
-    
 slider1:4<1,32,1>Beats
 slider2:0<0,3,1{1,2,3,4}>Number of Lanes
 slider3:50<1,100,0.1>Error Bound (%)
