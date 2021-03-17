@@ -147,7 +147,7 @@ function resetPlay() local(i)
 (
   i=0;
   while (i<4) (
-    (v_play_timers[i] > 0 ? v_play_timers[i] = -1;);
+    v_play_timers[i] = -1;
     v_play_indices[i] = 0; 
     i += 1;
   )
@@ -392,7 +392,7 @@ function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel)
   (v_play_off_timers[lane] < samplesblock) ? (
     midisend(max(0, v_play_off_timers[lane]), $x90 + channel, getClickNote(lane), 0);
     v_play_off_timers[lane] = 1000000;
-  );
+  );   
   
   // find next "grid line" such that timer will be >= sampleblock
   (v_play_timers[lane] < samplesblock) ? (
@@ -523,6 +523,11 @@ function isRButtonRelease()
   (2 ~ mouse_cap) & prev_mouse_cap & 2;
 );
 
+function isLButtonDoubleClick()
+(
+  isLButtonRelease() && (time_precise() - prev_mouse_l_button_release_time < 0.4); 
+);
+
 function rgb(r,g,b) 
 (
   gfx_r = r;
@@ -622,11 +627,11 @@ function isMouseInRect(l,t,w,h)
   mouse_x >= l && mouse_x <= l+w && mouse_y >= t && mouse_y <= t+h;
 );
 
-function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
+function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, prev_x, resolution, ctrl_id)
 (
   ctrl_id = controlId(lane, control_phase);
   
-  active_control == ctrl_id ? (
+  (mouse_x != prev_x) && (active_control == ctrl_id) ? (
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
@@ -638,16 +643,20 @@ function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
       orig_x = mouse_x;
   );
   
+  focus_control == ctrl_id && isLButtonDoubleClick() ? setPhase(lane, 0);
+  
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     sprintf(#value_edit, "Phase: %0.2f", getPhase(lane));
   );
+  
+  prev_x = mouse_x;
 );
 
-function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, resolution, ctrl_id)
+function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, prev_x, resolution, ctrl_id)
 (
   ctrl_id = controlId(lane, control_swing);
   
-  active_control == ctrl_id ? (
+  (mouse_x != prev_x) && (active_control == ctrl_id) ? (
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
@@ -659,9 +668,13 @@ function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
       orig_x = mouse_x;
   );
   
+  focus_control == ctrl_id && isLButtonDoubleClick() ? setSwing(lane, 0);
+
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     sprintf(#value_edit, "Swing: %0.2f", getSwing(lane));
   );
+  
+  prev_x = mouse_x;
 );
 
 function emptyRect(l,t,w,h)
@@ -1026,6 +1039,7 @@ drawTrainingGraphTitle(xmargin, y);
 y+=20;
 drawTrainingGraph(xmargin, y, width, max(80, gfx_h - footer_margin - y));
 
+isLButtonRelease() ? prev_mouse_l_button_release_time = time_precise();
 prev_mouse_cap = mouse_cap;
 mouse_wheel = 0;
 mouse_cap & 1 == 0 ? active_control = 0;
