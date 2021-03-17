@@ -41,7 +41,7 @@ slider4:0<0,1,1{Off,On}>Auto Shrink Error Bound
 
 // Hidden sliders per lane
 slider13:8<1,32,1>-Divisions1
-slider14:0<-0.5,0.5,0.01>-Swing1
+slider14:0<-0.91666, 0.91666,0.01>-Swing1
 slider15:0<0,1,0.01>-Phase1
 slider16:0<0,1,1>-Click1
 slider17:60<0,127,1>-ClickNote1
@@ -53,7 +53,7 @@ slider22:0<0,127,1>-InputMinNote1
 slider23:127<0,127,1>-InputMaxNote1
 
 slider26:8<1,32,1>-Divisions2
-slider27:0<-0.5,0.5,0.01>-Swing2
+slider27:0<-0.91666, 0.91666,0.01>-Swing2
 slider28:0<0,1,0.01>-Phase2
 slider29:0<0,1,1>-Click2
 slider30:62<0,127,1>-ClickNote2
@@ -65,7 +65,7 @@ slider35:0<0,127,1>-InputMinNote2
 slider36:127<0,127,1>-InputMaxNote2
 
 slider39:8<1,32,1>-Divisions3
-slider40:0<-0.5,0.5,0.01>-Swing3
+slider40:0<-0.91666, 0.91666,0.01>-Swing3
 slider41:0<0,1,0.01>-Phase3
 slider42:0<0,1,1>-Click3
 slider43:64<0,127,1>-ClickNote3
@@ -77,7 +77,7 @@ slider48:0<0,127,1>-InputMinNote3
 slider49:127<0,127,1>-InputMaxNote3
 
 slider52:8<1,32,1>-Divisions4
-slider53:0<-0.5,0.5,0.01>-Swing4
+slider53:0<-0.91666, 0.91666,0.01>-Swing4
 slider54:0<0,1,0.01>-Phase4
 slider55:0<0,1,1>-Click4
 slider56:65<0,127,1>-ClickNote4
@@ -211,7 +211,7 @@ function getSwing(lane)
 
 function setSwing(lane, value) local(idx)
 (
-  setSlider(lane, slider_offset_swing, value, -0.5, 0.5, 1);
+  setSlider(lane, slider_offset_swing, value, -0.91666, 0.91666, 1);
 );
 
 function getPhase(lane)
@@ -628,7 +628,7 @@ function isMouseInRect(l,t,w,h)
   mouse_x >= l && mouse_x <= l+w && mouse_y >= t && mouse_y <= t+h;
 );
 
-function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, prev_x, resolution, ctrl_id)
+function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, ph, orig_value, orig_x, prev_x, resolution, ctrl_id)
 (
   ctrl_id = controlId(lane, control_phase);
   
@@ -636,7 +636,7 @@ function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
-      setPhase(lane, max(0, min(1, dx)));
+      setPhase(lane, dx);
     ) 
   : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
@@ -647,13 +647,14 @@ function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
   focus_control == ctrl_id && isLButtonDoubleClick() ? setPhase(lane, 0);
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
-    sprintf(#value_edit, "Phase: %0.2f", getPhase(lane));
+    ph = getPhase(lane);
+    sprintf(#value_edit, "Phase: %0.2f (%0.0f°)", ph, ph*360);
   );
   
   prev_x = mouse_x;
 );
 
-function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_x, prev_x, resolution, ctrl_id)
+function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, sw, orig_value, orig_x, prev_x, resolution, ctrl_id)
 (
   ctrl_id = controlId(lane, control_swing);
   
@@ -661,7 +662,7 @@ function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
       dx = orig_value + (mouse_x - orig_x)*divs/w/2;
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
-      setSwing(lane, max(-0.5, min(0.5, dx)));
+      setSwing(lane, dx);
     ) 
   : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
@@ -672,8 +673,8 @@ function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, orig_value, orig_
   focus_control == ctrl_id && isLButtonDoubleClick() ? setSwing(lane, 0);
 
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
-    sprintf(#value_edit, "Swing: %0.2f", getSwing(lane));
-  );
+    sw = getSwing(lane);
+    sprintf(#value_edit, "Swing: %0.2f (%0.0f°)", sw, sw*360);  );
   
   prev_x = mouse_x;
 );
