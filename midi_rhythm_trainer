@@ -808,7 +808,8 @@ function drawToolBar(lane, l, t, w, h) local(release, f0, f1, f2, f3, f4, f5, f6
     (listen_note_control == control_button_in_min_note_id) ? sprintf(#value_edit, "Input Min Note: LISTENING") 
     : f10 ? sprintf(#value_edit, "Input Min Note: %s (%d)", noteName(min_note), min_note); 
     mouse_wheel_dir ? (
-      (f1 || f2) ? setDivs(lane, getDivs(lane)+mouse_wheel_dir)
+      f5 ? setClick(lane, mouse_wheel_dir)
+      : (f1 || f2) ? setDivs(lane, getDivs(lane)+mouse_wheel_dir)
       : (f3 || f4) ? setClickVel(lane, getClickVel(lane)+mouse_wheel_dir)
       : f6 && (listen_note_control != control_button_click_note_id) ? setClickNote(lane, click_note+mouse_wheel_dir)
       : (f7 || f8) ? setInputChannel(lane, getInputChannel(lane)+mouse_wheel_dir)
