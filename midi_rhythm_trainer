@@ -498,6 +498,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
        midisend(offset, msg1, msg2, msg3)
      : (
        reltime = getRelTime(offset);
+       
        hit = isHit(reltime, lane);
        hit == 0 ? midisend(offset,msg1,note,msg3);
        recordHistory(reltime, hit, lane, note)
@@ -728,7 +729,7 @@ function toggleListen(control)
   listen_note_control = listen_note_control == control ? 0 : control;
 );
 
-function drawToolBar(lane, l, t, w, h) local(release, f1, f2, f3, f4, f5, f6, f7, f8, button_left, button_top, click_note)
+function drawToolBar(lane, l, t, w, h) local(release, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, button_width, button_left, button_top, click_note)
 (
   gfx_setfont(1, "Arial", 14);
   release = isLButtonRelease();
@@ -827,7 +828,7 @@ function drawMidiMonitor(lane, l,t,w,h) local(age)
   emptyRect(l,t,w-1,h-1);
 );
 
-function DrawGrid(lane, l,t,w,h) local(i, x,y, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
+function DrawGrid(lane, l,t,w,h) local(i, x,y, age, birth, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
 (  
   focus_control = 0;
   toolbar_height = 20;
