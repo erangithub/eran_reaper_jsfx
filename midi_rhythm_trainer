@@ -1,25 +1,6 @@
 desc: MIDI Rhythm Trainer
 author: Eran Talmor
-version: 1.02
-link:
-  Youtube tutorial https://youtu.be/cifj6eh_LF0
-  Forum Thread https://forum.cockos.com/showthread.php?t=250891
-about:
-  # MIDI Rhythm Trainer
-
-  A tool for improving your sense of rhythm.
-
-  Key features:
-
-  * Define a rhythmic pattern, and play along to hit the pattern. Only accurate notes will be heard!
-  * Get visual and audio feedback on your performance. 
-  * Error bound: control the level of accuracy you wish to achieve.
-  * Auto error bound shrink: let the tool challenge you as you improve.
-  * Support complex polyrhythms, e.g: 4 beat pattern, divided to 5 in the right hand, 7 in the left hand.
-  * Set up complex splits - up to 4 "lanes",  receiving separate key ranges and input channels.
-  * Set "click' sounds for each lane (like a metronome).
-  * "Swing" and "Phase" parameters.
-  * See you progress on a "10 minute training graph"
+version: 1.03
 
 /*******************************************************************************
 *  Copyright 2021, Eran Talmor                                                 *
@@ -35,7 +16,7 @@ about:
 *******************************************************************************/
 
 slider1:4<1,32,1>Beats
-slider2:0<0,3,1{1,2,3,4}>Number of Lanes
+slider2:0<0,3,1{1,2,3,4}>Lanes
 slider3:50<1,100,0.1>Error Bound (%)
 slider4:0<0,1,1{Off,On}>Auto Shrink Error Bound
 
@@ -637,6 +618,7 @@ function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, ph, orig_value, o
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
       setPhase(lane, dx);
+      prev_x = mouse_x;
     ) 
   : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
@@ -649,9 +631,7 @@ function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, ph, orig_value, o
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     ph = getPhase(lane);
     sprintf(#value_edit, "Phase: %0.2f (%0.0f°)", ph, ph*360);
-  );
-  
-  prev_x = mouse_x;
+  );  
 );
 
 function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, sw, orig_value, orig_x, prev_x, resolution, ctrl_id)
@@ -663,6 +643,7 @@ function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, sw, orig_value, o
       resolution = mouse_cap & 4 ? 12 : 360;  
       dx = floor(dx*resolution + 0.5) / resolution;
       setSwing(lane, dx);
+      prev_x = mouse_x;
     ) 
   : active_control == 0 && focus_control == ctrl_id && (mouse_cap & 1) ? (
       active_control = focus_control;
@@ -675,8 +656,6 @@ function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, sw, orig_value, o
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     sw = getSwing(lane);
     sprintf(#value_edit, "Swing: %0.2f (%0.0f°)", sw, sw*360);  );
-  
-  prev_x = mouse_x;
 );
 
 function emptyRect(l,t,w,h)
