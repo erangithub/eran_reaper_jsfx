@@ -449,8 +449,17 @@ resetPlay();
 
 @block
 
-function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel)
+function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel, i, prev_beat_position)
 (
+  beat_position < prev_beat_position ? (
+    i=0;
+    while(i<4) (
+      v_play_indices[i] = 0;
+      v_play_timers[i] = -1;
+      i+=1;
+    );
+  );
+
   channel = getClickChannel(lane)-1;
   (v_play_off_timers[lane] < samplesblock) ? (
     midisend(max(0, v_play_off_timers[lane]), $x90 + channel, getClickNote(lane), 0);
@@ -475,6 +484,7 @@ function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel)
   
   v_play_timers[lane] -= samplesblock;
   v_play_off_timers[lane] -= samplesblock;
+  prev_beat_position = beat_position;
 );
 
 function decayHistogram(lane) local(prev_time, t, i)
