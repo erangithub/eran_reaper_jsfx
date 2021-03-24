@@ -130,7 +130,7 @@ v_history_notes = malloc(max_hist);
 v_midi_monitor_last_hit = malloc(4);
 v_play_indices = malloc(4);
 v_play_timers = malloc(4);
-v_play_off_timers = malloc(4*max_hist);
+v_play_off_timers = malloc(4);
 v_graph_hit_rate = malloc(max_graph);
 v_graph_error_bound = malloc(max_graph);
 v_histogram = malloc(4*histogram_size);
@@ -459,8 +459,10 @@ function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel)
   
   // find next "grid line" such that timer will be >= sampleblock
   (v_play_timers[lane] < samplesblock) ? (
-    isGridEnabled(lane, v_play_indices[lane]) && v_play_timers[lane] >= 0 ? 
+    isGridEnabled(lane, v_play_indices[lane]) && v_play_timers[lane] >= 0 ? (
       midisend(max(0, v_play_timers[lane]), $x90 + channel, getClickNote(lane), getClickVel(lane));
+      v_play_off_timers[lane] = v_play_timers[lane] + 1;
+    );
     sp_per_beat = srate * 60 / tempo;
     sp_now = floor(0.001 + beat_position * sp_per_beat);
     divs = getDivs(lane);
@@ -469,7 +471,6 @@ function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel)
       sp_grid = floor(0.001 + 1 * getGrid(lane, divs, v_play_indices[lane]) * sp_per_beat * beats);
       v_play_timers[lane] = sp_grid - sp_now;
     );
-    v_play_off_timers[lane] = 0;//sp_per_beat*beats/divs/3;
   );
   
   v_play_timers[lane] -= samplesblock;
