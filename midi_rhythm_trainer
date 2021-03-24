@@ -753,7 +753,7 @@ function dragPhase(lane,focus_control,divs, l,t,w,h) local(dx, ph, orig_value, o
   
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     ph = getPhase(lane);
-    sprintf(#value_edit, "Phase: %0.2f (%0.0fÂ°)", ph, ph*360);
+    sprintf(#value_edit, "Phase: %0.2f (%0.0f°)", ph, ph*360);
   );  
 );
 
@@ -778,7 +778,7 @@ function dragSwing(lane,focus_control,divs, l,t,w,h) local(dx, sw, orig_value, o
 
   (active_control == ctrl_id || focus_control == ctrl_id) ? (
     sw = getSwing(lane);
-    sprintf(#value_edit, "Swing: %0.2f (%0.0fÂ°)", sw, sw*360);  );
+    sprintf(#value_edit, "Swing: %0.2f (%0.0f°)", sw, sw*360);  );
 );
 
 function emptyRect(l,t,w,h)
