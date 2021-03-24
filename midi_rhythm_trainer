@@ -114,22 +114,30 @@ prev_select = -1;
 histogram_buckets = 1024;
 histogram_size = histogram_buckets*2;
 
-v_history_time = 4; 
-v_history_rel_time = v_history_time + max_hist;
-v_history_hits = v_history_rel_time + max_hist;
-v_history_lane = v_history_hits + max_hist;
-v_history_notes = v_history_lane + max_hist;
-v_midi_monitor_last_hit = v_history_notes + max_hist;
-v_play_indices = v_midi_monitor_last_hit + 4;
-v_play_timers = v_play_indices + 4;
-v_play_off_timers = v_play_timers + 4;
-v_graph_hit_rate = v_play_off_timers + 4*max_hist;
-v_graph_error_bound = v_graph_hit_rate + max_graph;
-v_histogram = v_graph_error_bound + max_graph;
-v_histogram_tmp = v_histogram + 4*histogram_size;
-v_max_value = v_histogram_tmp + histogram_size;
+heap_top = 0;
 
-v_normal_dist = v_max_value + 4;
+function malloc(size) local(p) (
+  p = heap_top;
+  heap_top += size;
+  p;
+);
+
+v_history_time = malloc(max_hist); 
+v_history_rel_time = malloc(max_hist);
+v_history_hits = malloc(max_hist);
+v_history_lane = malloc(max_hist);
+v_history_notes = malloc(max_hist);
+v_midi_monitor_last_hit = malloc(4);
+v_play_indices = malloc(4);
+v_play_timers = malloc(4);
+v_play_off_timers = malloc(4*max_hist);
+v_graph_hit_rate = malloc(max_graph);
+v_graph_error_bound = malloc(max_graph);
+v_histogram = malloc(4*histogram_size);
+v_histogram_tmp = malloc(histogram_size);
+v_max_value = malloc(4);
+
+v_normal_dist = malloc(31);
 v_normal_dist[0] = 0;
 v_normal_dist[1] = 0.0398;
 v_normal_dist[2] = 0.0793;
@@ -162,7 +170,7 @@ v_normal_dist[28] = 0.4974;
 v_normal_dist[29] = 0.4981;
 v_normal_dist[30] = 0.4987;
 
-v_normal_mask = v_normal_dist+31;
+v_normal_mask = malloc(histogram_size);
 
 function normal_dist(x)
 (
