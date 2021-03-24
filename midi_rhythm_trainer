@@ -135,7 +135,10 @@ v_graph_hit_rate = malloc(max_graph);
 v_graph_error_bound = malloc(max_graph);
 v_histogram = malloc(4*histogram_size);
 v_histogram_tmp = malloc(histogram_size);
-v_max_value = malloc(4);
+v_histogram_max_value = malloc(4);
+memset(v_histogram_max_value, 1, 4);
+v_rounds = malloc(4);
+v_beat_pos = malloc(4);
 
 v_normal_dist = malloc(31);
 v_normal_dist[0] = 0;
@@ -475,6 +478,7 @@ function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel, i, pr
     sp_per_beat = srate * 60 / tempo;
     sp_now = floor(0.001 + beat_position * sp_per_beat);
     divs = getDivs(lane);
+    
     while (v_play_timers[lane] < samplesblock) (
       v_play_indices[lane] += 1;
       sp_grid = floor(0.001 + 1 * getGrid(lane, divs, v_play_indices[lane]) * sp_per_beat * beats);
@@ -487,16 +491,20 @@ function playGrid(lane) local(sp_per_beat, sp_now, divs, sp_grid, channel, i, pr
   prev_beat_position = beat_position;
 );
 
-function decayHistogram(lane) local(prev_time, t, i)
+function decayHistogram(lane) local(i, decay_rate, round, prev_round, prev_pos)
 (
-  t = time_precise();
-  abs(t - prev_time)>10 ? (
+  decay_rate = 0.95;
+  
+  round = floor(beat_position / beats);
+  (v_rounds[lane] != round) || (beat_position < v_beat_pos[lane]) ? (
     i = 0;
     while (i<histogram_buckets) (
-      v_histogram[histogram_size*lane + 2*i] *= 0.6;
+      v_histogram[histogram_size*lane + 2*i] *= decay_rate;
       i+=1;
     );
-    prev_time = t;
+    v_histogram_max_value[lane] *= decay_rate;
+    v_rounds[lane] = round;
+    v_beat_pos[lane] = beat_position;
   );
 );
 
@@ -583,7 +591,6 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
      lane >= 0 ? recordMidiMonitor(lane);
    );
    isPlaying() && is_note_on ? (
-     decayHistogram(lane);
      listen_note_control ? (
        learnNote(note);
        midisend(offset, msg1, msg2, msg3)
@@ -595,6 +602,7 @@ while (midirecv(offset,msg1,msg2,msg3)) ( // REAPER 4.59+ syntax w while()
        
        hit = isHit(reltime, lane);
        hit == 0 ? midisend(offset,msg1,note,msg3);
+       decayHistogram(lane);
        recordHistory(reltime, hit, lane, note);
        recordHistogram(reltime, lane);
      )
@@ -939,7 +947,7 @@ function drawHistogram(lane, l, t, w, h) local (value, x, y, normalized)
   ifft(v_histogram_tmp, histogram_buckets);
   i = 0;
   max_value = 0;
-  prev_max_value = v_max_value[lane];
+  prev_max_value = v_histogram_max_value[lane];
   while(i < w) (
     x = l+i;
     value = v_histogram_tmp[2*floor(i/w*histogram_buckets)];
@@ -949,8 +957,8 @@ function drawHistogram(lane, l, t, w, h) local (value, x, y, normalized)
     gfx_line(x,y,x,t+h);
     i+=1;
   );
-  fit_speed = 0.2;
-  v_max_value[lane] = (1-fit_speed)*prev_max_value + fit_speed*max_value;
+  fit_speed = 0.05;
+  v_histogram_max_value[lane] = (1-fit_speed)*prev_max_value + fit_speed*max_value;
 );
 
 function DrawGrid(lane, l,t,w,h) local(i, x,y, age, birth, hit,now,low,grid,high,i,divs, toolbar_height, focus_control)
