@@ -107,12 +107,11 @@ hist_idx = 0;
 max_hist = 200;
 max_age = 60;
 max_graph = 10*60;
-graph_start = 0;
-graph_idx = 0;
 hit_memory = 0.85;
 prev_select = -1;
 histogram_buckets = 1024;
 histogram_size = histogram_buckets*2;
+hist_idx = 0;
 
 heap_top = 0;
 
@@ -127,6 +126,11 @@ v_history_rel_time = malloc(max_hist);
 v_history_hits = malloc(max_hist);
 v_history_lane = malloc(max_hist);
 v_history_notes = malloc(max_hist);
+memset(v_history_time, 0, max_hist);
+memset(v_history_rel_time, 0, max_hist);
+memset(v_history_hits, 0, max_hist);
+memset(v_history_lane, 0, max_hist);
+memset(v_history_notes, 0, max_hist);
 v_midi_monitor_last_hit = malloc(4);
 v_play_indices = malloc(4);
 v_play_timers = malloc(4);
@@ -136,7 +140,6 @@ v_graph_error_bound = malloc(max_graph);
 v_histogram = malloc(4*histogram_size);
 v_histogram_tmp = malloc(histogram_size);
 v_histogram_max_value = malloc(4);
-memset(v_histogram_max_value, 1, 4);
 v_rounds = malloc(4);
 v_beat_pos = malloc(4);
 
@@ -519,13 +522,15 @@ function recordHistory(reltime, hit, lane, note)
   hist_idx = (hist_idx + 1) % max_hist;
 );
 
-function recordTraining() local(t)
+function recordTraining() local(t, prev_time)
 (
   t = time();
-  (t - graph_start > max_graph) ? graph_start = t;
-  graph_idx = t - graph_start;
-  v_graph_hit_rate[graph_idx] = hit_rate;
-  v_graph_error_bound[graph_idx] = error_bound;
+  t != prev_time ? (
+    graph_idx = (graph_idx+1) % max_graph;
+    v_graph_hit_rate[graph_idx] = hit_rate;
+    v_graph_error_bound[graph_idx] = error_bound;
+    prev_time = t
+  )
 );
 
 function recordMidiMonitor(lane)
@@ -1061,14 +1066,12 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, age, birth, hit,now,low,grid,high
 
 function clearTrainingGraph()
 (
-  graph_start=0;
-  graph_idx=0;
-  i=0;
-  while (i<max_graph) (
-    v_graph_error_bound[i] = 0;
-    v_graph_hit_rate[i] = 0;
-    i+=1;
-  );
+  memset(v_graph_error_bound, 0, max_graph);
+  memset(v_graph_hit_rate, 0, max_graph);
+  memset(v_histogram, 0, 4*histogram_size);
+  memset(v_histogram_max_value, 1, 4);
+  graph_idx = 0;
+  hit_rate = 0;
 );
 
 function drawTrainingGraphTitle(left, top)
@@ -1169,3 +1172,7 @@ isLButtonRelease() ? prev_mouse_l_button_release_time = time_precise();
 prev_mouse_cap = mouse_cap;
 mouse_wheel = 0;
 mouse_cap & 1 == 0 ? active_control = 0;
+
+@serialize
+// This causes the general state to be kept between DAW "play"s
+file_var(0, dummy);
