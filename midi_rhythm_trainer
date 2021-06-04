@@ -1,6 +1,6 @@
 desc: MIDI Rhythm Trainer
 author: Eran Talmor
-version: 1.13
+version: 1.14
 
 /*******************************************************************************
 *  Copyright 2021, Eran Talmor                                                 *
@@ -1098,7 +1098,7 @@ function clearTrainingGraph()
   hit_rate = 0;
 );
 
-function drawTrainingGraphTitle(left, top)
+function drawTrainingGraphTitle(left, top) local(errorMs)
 (
   gfx_a = 1;
   gfx_x = left;
@@ -1111,7 +1111,8 @@ function drawTrainingGraphTitle(left, top)
   rgb(1,1,1);
   gfx_printf(", ");
   rgb(0,1,1);
-  gfx_printf("Error Bound: %0.0f%%", error_bound*100);
+  errorMs = floor(0.5 + error_bound * beats * 30000 / tempo / max_divs);
+  gfx_printf("Error Bound: %0.0f%% = \xB1%dms", error_bound*100, errorMs);
   rgb(1,1,1);
   gfx_printf(")");
   
