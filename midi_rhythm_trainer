@@ -1,6 +1,6 @@
 desc: MIDI Rhythm Trainer
 author: Eran Talmor
-version: 1.14
+version: 1.15
 
 /*******************************************************************************
 *  Copyright 2021, Eran Talmor                                                 *
@@ -341,7 +341,7 @@ function getGridMask(lane, idx)
 (
   d = getDivs(lane);
   idx = (idx + d) % d;
-  getSlider(lane, slider_offset_mask) & (1<<idx);
+  1 & (getSlider(lane, slider_offset_mask) >> idx);
 );
 
 function setGridMask(lane, idx, value)
@@ -1009,7 +1009,7 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, age, birth, hit,now,low,grid,high
     )
     : (
       mouse_focus = isMouseInRect(grid-8, t, 16, h - toolbar_height);
-      mouse_focus && isRButtonPress() ? grid_mask_mode = 1 + (getGridMask(lane, i) > 0);
+      mouse_focus && isRButtonPress() ? grid_mask_mode = 1 + getGridMask(lane, i);
       ((i+1)%2) && ((!active_control && mouse_focus) || (active_control == ctrl_phase_id)) ? (
         focus_control = ctrl_phase_id;
         rgb(0,0.5,0.5);
