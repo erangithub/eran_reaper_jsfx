@@ -992,6 +992,12 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, age, birth, hit,now,low,grid,high
   gfx_a = 1;
   gfx_rect(l, t, w, h);
 
+  // Draw current beat rectangle in different background color
+  current_rel_beat = (beat_position % beats) / beats;
+  
+  rgb(0.65,0.65,0.65);// 0.2, 0.3, 0.4);
+  gfx_rect(l + w*current_rel_beat, t, w/beats, h);
+  
   // Draw "grid" area
   divs = getDivs(lane);
     
