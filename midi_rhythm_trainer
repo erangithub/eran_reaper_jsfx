@@ -1,10 +1,11 @@
 desc: MIDI Rhythm Trainer
 author: Eran Talmor
-version: 1.2
+version: 1.21
 changelog:
   * Added latency compensation slider.
-  * Error bound is now measured in absolute time (milliseconds)
-  * Current beat is highlighted.
+  * Error bound is now measured in absolute time (milliseconds).
+  * Current beat is highlighted, shrinking towards next beat.
+  * Fixed minor memory overwrite.
 
 /*******************************************************************************
 *  Copyright 2023, Eran Talmor                                                 *
@@ -206,13 +207,15 @@ function normal_slice(x, w)
   normal_dist(x+w/2) - normal_dist(x-w/2);
 );
 
-function setNormalMask(h)
+function setNormalMask(h) local(i, y)
 (
   memset(v_normal_mask, 0, histogram_size);
+  
   i = 0;
-  while (i<=histogram_buckets/2) (
-    v_normal_mask[i*2] = normal_slice(h*(i/histogram_buckets),0.1)/5;
-    v_normal_mask[histogram_size-i*2] = v_normal_mask[i*2];
+  while (i<histogram_buckets/2) (
+    y = normal_slice(h*(i/histogram_buckets),0.1)/5;
+    v_normal_mask[i*2] = y;
+    v_normal_mask[histogram_size-i*2-2] = y;
     i += 1;
   );
   fft(v_normal_mask, histogram_buckets);
@@ -996,12 +999,6 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, age, birth, hit,now,low,grid,high
   gfx_a = 1;
   gfx_rect(l, t, w, h);
 
-  // Draw current beat rectangle in different background color
-  current_rel_beat = (beat_position % beats) / beats;
-  
-  rgb(0.65,0.65,0.65);
-  gfx_rect(l + w*current_rel_beat, t, w/beats, h);
-  
   // Draw "grid" area
   divs = getDivs(lane);
     
@@ -1090,11 +1087,16 @@ function DrawGrid(lane, l,t,w,h) local(i, x,y, age, birth, hit,now,low,grid,high
       );
       i += 1;
     );
-    gfx_a = 1;
     
-    // Draw vertical time line 
+    // Draw vertical time line and highlight current beat
+    curr_beat = beat_position % beats;
     rgb(1,1,0);
     x = l + w * getRelTime(0);
+    gfx_a = 0.15;
+    current_rel_beat = (curr_beat + 1) / beats;
+    delta_x = ceil(l+w*current_rel_beat)-x;
+    gfx_rect(x, t, delta_x, h);
+    gfx_a = 1;
     gfx_line(x, t, x, t+h);
   );  
   
